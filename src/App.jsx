@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Check, X, MinusCircle, ChevronDown, FileText, Building2,
   ClipboardList, BarChart3, ArrowLeft, AlertTriangle,
@@ -10,20 +10,21 @@ const LOGO_PE_BASE64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAcUAAADICA
 const LOGO_SCI_BASE64 = "data:image/png;base64,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";
 
 const HOSPITAIS = [
-  { sigla: "HR", nome: "Hospital HR", cor: "#1F5A4A" },
-  { sigla: "HRA", nome: "Hospital HRA", cor: "#8B5A2B" },
-  { sigla: "HGV", nome: "Hospital HGV", cor: "#3D5A73" },
-  { sigla: "HBL", nome: "Hospital HBL", cor: "#6B4A7A" },
-  { sigla: "HAM", nome: "Hospital HAM", cor: "#5C7A3D" },
-  { sigla: "HOF", nome: "Hospital HOF", cor: "#946846" },
+  { sigla: "HR", nome: "Hospital HR", cor: "#0068FF" },
+  { sigla: "HRA", nome: "Hospital HRA", cor: "#FF6700" },
+  { sigla: "HGV", nome: "Hospital HGV", cor: "#4400FF" },
+  { sigla: "HBL", nome: "Hospital HBL", cor: "#3AE8C6" },
+  { sigla: "HAM", nome: "Hospital HAM", cor: "#4AE23D" },
+  { sigla: "HOF", nome: "Hospital HOF", cor: "#FFCE00" },
 ];
 
 const ARTIGOS = [
   {
     art: "Art. 5º, parágrafo único",
-    titulo: "Cadastro de beneficiários",
+    titulo: "Cadastro de beneficiários (terceirizados)",
     texto:
-      "Verificar se a área de Gestão do Trabalho mantém cadastro atualizado de colaboradores e prestadores com direito à alimentação. Checar data da última atualização e se há divergência entre o cadastro e a folha de pessoal/contratos vigentes.",
+      "Verificar se a área de Gestão do Trabalho mantém cadastro atualizado dos terceirizados com direito à alimentação. Checar data da última atualização e se há divergência entre o cadastro e os contratos vigentes. Anexe o cadastro no Drive e informe o link abaixo.",
+    comLink: true,
   },
   {
     art: "Art. 6º",
@@ -60,9 +61,10 @@ const ARTIGOS = [
   },
   {
     art: "Art. 9º",
-    titulo: "Escalas de trabalho",
+    titulo: "Escalas de trabalho (servidores)",
     texto:
-      "Verificar se só acessaram o refeitório pessoas constantes em escala enviada à nutrição. Cruzar lista de acessos com a escala do mês. Checar se a escala foi enviada até o dia 20 do mês anterior.",
+      "Verificar se só acessaram o refeitório, no caso de servidores, aqueles que constam na escala enviada pela nutrição. Cruzar lista de acessos com a escala do mês. Checar se a escala foi enviada até o dia 20 do mês anterior. Anexe a escala no Drive e informe o link abaixo.",
+    comLink: true,
   },
   {
     art: "Art. 9º, §2º",
@@ -95,12 +97,7 @@ const ARTIGOS = [
       "Cruzar a fatura da empresa contratada com os registros de acesso, escalas e autorizações formais, refeição por refeição ou por totais consolidados. Verificar se há cobrança por estimativa (proibida) em vez de cobrança pelo volume efetivamente registrado. Confirmar se a fatura foi validada pela unidade hospitalar antes do ateste e pagamento, e se há evidência documental dessa validação prévia.",
     sensivel: true,
   },
-  {
-    art: "Art. 15",
-    titulo: "Casos omissos/concessões excepcionais",
-    texto:
-      "Levantar concessões de alimentação fora das regras normais e verificar se cada uma tem justificativa formal da direção da unidade.",
-  },
+
 ];
 
 const STATUS = { CONFORME: "conforme", NAO_CONFORME: "nao_conforme", NA: "na" };
@@ -114,12 +111,40 @@ const MESES_ABREV = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Se
 const META_BIOMETRIA = 90;
 const LIMITE_CRITICO_BIOMETRIA = 70;
 
-const TIPOS_REFEICAO = ["Jejum", "Desjejum", "Almoço", "Lanche", "Jantar", "Ceia"];
+// Refeições por categoria conforme fatura da contratada
+const REFEICOES_SERVIDOR = ["Desjejum", "Almoço", "Ceia"];
+const REFEICOES_ACOMPANHANTE = ["Desjejum", "Almoço", "Ceia"];
+const REFEICOES_PACIENTE = ["Lanche"]; // paciente: só lanche, sem desjejum/almoço/ceia
+// Todos os tipos únicos para custo unitário e referência
+const TIPOS_REFEICAO = ["Desjejum", "Almoço", "Ceia", "Lanche"];
+
+// Retorna as refeições válidas para cada categoria
+function refeicoesDaCategoria(catId) {
+  if (catId === "servidor") return REFEICOES_SERVIDOR;
+  if (catId === "acompanhante") return REFEICOES_ACOMPANHANTE;
+  if (catId === "paciente") return REFEICOES_PACIENTE;
+  return TIPOS_REFEICAO;
+}
+
+// Verifica se uma combinação tipo+categoria é válida
+function combinacaoValida(tipo, catId) {
+  return refeicoesDaCategoria(catId).includes(tipo);
+}
 
 const CATEGORIAS_PUBLICO = [
-  { id: "profissional", label: "Profissional de Saúde" },
-  { id: "terceirizado", label: "Terceirizado" },
+  { id: "servidor", label: "Servidor" },
   { id: "acompanhante", label: "Acompanhante" },
+  { id: "paciente", label: "Paciente (lanche)" },
+];
+
+
+const SERVIDORES_UCI = [
+  "José Henrique",
+  "Johnson Rodrigues",
+  "Silvana Melo",
+  "Vera Lúcia",
+  "Sandro Mendonça",
+  "Bruno Batista",
 ];
 
 // ---------- Domínio: Medicamentos ----------
@@ -136,12 +161,12 @@ const ESTOQUES_MEDICAMENTOS = [
 const META_ACURACIA = 95; // meta mínima de acurácia do teste (curva ABC, faixa A/80%)
 const LIMITE_CRITICO_ACURACIA = 80; // abaixo disso, recomenda-se inventário imediato
 
-// Histórico de exemplo dos testes de acurácia por setor, para já demonstrar a matriz do Painel
+// Histórico de exemplo dos verificações de acurácia por setor, para já demonstrar a matriz do Painel
 // preenchida. Cada setor tem uma quantidade diferente de testes já realizados (2 a 5), e os
 // percentuais variam o suficiente para incluir casos dentro da meta, abaixo da meta e críticos.
 function gerarHistoricoAcuraciaMedicamentosMock() {
   const quantidadeTestesPorSetor = [5, 2, 4, 3, 5, 2, 4]; // alinhado com a ordem de ESTOQUES_MEDICAMENTOS
-  const quantidadeInventariosPorSetor = [4, 6, 2, 5, 3, 7, 4]; // independente da quantidade de testes de acurácia
+  const quantidadeInventariosPorSetor = [4, 6, 2, 5, 3, 7, 4]; // independente da quantidade de verificações de acurácia
   const hoje = new Date();
   const resultado = {};
 
@@ -149,15 +174,14 @@ function gerarHistoricoAcuraciaMedicamentosMock() {
     const rand = seededRandom(4200 + idx * 17);
     const baseline = [96, 91, 78, 97, 88, 99, 84][idx] ?? 92; // tendência própria de cada setor
     const qtd = quantidadeTestesPorSetor[idx];
-    const acuracias = [];
+    const verificacoes = [];
 
     for (let i = 0; i < qtd; i++) {
       const variacao = (rand() - 0.5) * 14;
       let pct = Math.round((baseline + variacao) * 10) / 10;
       pct = Math.max(60, Math.min(100, pct));
       const d = new Date(hoje.getFullYear(), hoje.getMonth() - (qtd - i) * 1, 10 + i);
-      // Mais recente primeiro, no mesmo padrão de armazenamento usado pelo registro real.
-      acuracias.unshift({
+      verificacoes.unshift({
         data: d.toISOString().slice(0, 10),
         percentual: pct,
         aplicadoPor: "UCI — Equipe de Auditoria",
@@ -169,17 +193,15 @@ function gerarHistoricoAcuraciaMedicamentosMock() {
     const inventarios = [];
     for (let i = 0; i < qtdInv; i++) {
       const d = new Date(hoje.getFullYear(), hoje.getMonth() - (qtdInv - i), 5 + i);
-      const teveDivergencia = randInv() > 0.65;
       inventarios.unshift({
         data: d.toISOString().slice(0, 10),
         responsavel: setor.responsavelPadrao,
-        divergencias: teveDivergencia
-          ? [{ identificada: "Divergência entre saldo do sistema e contagem física.", corrigida: "Ajuste de saldo realizado após conferência." }]
-          : [],
+        linkRelatorio: "",
+        observacoes: "",
       });
     }
 
-    resultado[setor.id] = { inventarios, acuracias };
+    resultado[setor.id] = { inventarios, verificacoes };
   });
 
   return resultado;
@@ -190,11 +212,11 @@ const HISTORICO_MEDICAMENTOS_MOCK = gerarHistoricoAcuraciaMedicamentosMock();
 function statusConfig(status) {
   switch (status) {
     case STATUS.CONFORME:
-      return { label: "Conforme", icon: Check, bg: "bg-[#1F5A4A]", text: "text-[#1F5A4A]", hex: "#1F5A4A" };
+      return { label: "Conforme", icon: Check, bg: "bg-green-600", text: "text-green-700", hex: "#4AE23D", bgHex: "#4AE23D", textHex: "#fff" };
     case STATUS.NAO_CONFORME:
-      return { label: "Não conforme", icon: X, bg: "bg-[#A13D2B]", text: "text-[#A13D2B]", hex: "#A13D2B" };
+      return { label: "Não conforme", icon: X, bg: "bg-[#ED282C]", text: "text-[#ED282C]", hex: "#ED282C", bgHex: "#ED282C", textHex: "#fff" };
     case STATUS.NA:
-      return { label: "Não se aplica", icon: MinusCircle, bg: "bg-[#8B7355]", text: "text-[#8B7355]", hex: "#8B7355" };
+      return { label: "Não se aplica", icon: MinusCircle, bg: "bg-[#FF6700]", text: "text-[#FF6700]", hex: "#6B7A8D", bgHex: "#E2E8F0", textHex: "#4A5568" };
     default:
       return null;
   }
@@ -211,7 +233,7 @@ function percentualBadge(valor, meta) {
   return (
     <span
       className={`font-mono-label text-[11px] uppercase tracking-wider px-2 py-1 border-2 pb-2.5 mb-0
-        ${dentro ? "border-[#1F5A4A] text-[#1F5A4A]" : "border-[#A13D2B] text-[#A13D2B]"}`}
+        ${dentro ? "border-[#1F5A4A] text-[#1F5A4A]" : "border-[#ED282C] text-[#ED282C]"}`}
     >
       {dentro ? "Dentro da meta" : "Abaixo da meta"}
     </span>
@@ -346,9 +368,12 @@ function gerarReferenciaMock() {
     TIPOS_REFEICAO.forEach((tipo) => {
       ref[h.sigla][tipo] = {};
       CATEGORIAS_PUBLICO.forEach((cat) => {
-        const baseCat = cat.id === "profissional" ? 420 : cat.id === "terceirizado" ? 180 : 260;
-        const baseTipo = tipo === "Almoço" || tipo === "Jantar" ? 1 : tipo === "Desjejum" || tipo === "Ceia" ? 0.7 : 0.4;
-        ref[h.sigla][tipo][cat.id] = Math.round(baseCat * baseTipo * (0.9 + rand() * 0.2));
+        const baseCat = cat.id === "servidor" ? 420 : cat.id === "acompanhante" ? 260 : 180;
+        const baseTipo = tipo === "Almoço" ? 1 : tipo === "Desjejum" || tipo === "Ceia" ? 0.7 : 0.4;
+        // Lanche só é válido para paciente; Desjejum/Almoço/Ceia não são válidos para paciente
+        ref[h.sigla][tipo][cat.id] = combinacaoValida(tipo, cat.id)
+          ? Math.round(baseCat * baseTipo * (0.9 + rand() * 0.2))
+          : null;
       });
     });
   });
@@ -358,7 +383,7 @@ function gerarReferenciaMock() {
 // Histórico de custo unitário por tipo de refeição, com vigência (data de início).
 // Cada entrada vale até a próxima começar.
 function gerarHistoricoCustoMock() {
-  const custosBase = { Jejum: 6.2, Desjejum: 8.4, Almoço: 16.9, Lanche: 7.1, Jantar: 16.2, Ceia: 8.8 };
+  const custosBase = { Desjejum: 8.4, Almoço: 16.9, Lanche: 7.1, Ceia: 8.8 };
   return [
     {
       id: "v1",
@@ -494,10 +519,14 @@ function GraficoSerieHistorica({
   corAbaixoReferencia,
   abaixoEhRuim = true,
   ariaLabel,
+  zonaOtima,
+  zonaIntermediaria,
+  zonaAlerta,
+  apenasPonotos = false,
 }) {
   const largura = 760;
   const altura = 420;
-  const margem = { top: 20, right: 24, bottom: 36, left: 48 };
+  const margem = { top: 24, right: 24, bottom: 40, left: 52 };
   const innerW = largura - margem.left - margem.right;
   const innerH = altura - margem.top - margem.bottom;
 
@@ -509,316 +538,313 @@ function GraficoSerieHistorica({
   const y = (v) => margem.top + innerH - ((v - yMin) / (yMax - yMin)) * innerH;
   const yRef = linhaReferencia !== undefined ? y(linhaReferencia) : null;
 
-  function corDoPonto(h, valor) {
-    if (linhaReferencia === undefined || corAbaixoReferencia === undefined) return h.cor;
-    const ruim = abaixoEhRuim ? valor < linhaReferencia : valor > linhaReferencia;
-    return ruim ? corAbaixoReferencia : h.cor;
+  function corDoPonto(h) {
+    return h.cor; // sempre a cor do hospital, independente do valor
+  }
+
+  const jitterMap = {};
+  hospitaisExibidos.forEach((h) => {
+    historico[h.sigla].forEach((d, i) => {
+      const valor = campoValor(d);
+      if (valor === null) return;
+      const key = `${i}-${Math.round(valor)}`;
+      if (!jitterMap[key]) jitterMap[key] = [];
+      jitterMap[key].push(h.sigla);
+    });
+  });
+
+  function jitterX(sigla, mesIdx, valor) {
+    const key = `${mesIdx}-${Math.round(valor)}`;
+    const group = jitterMap[key] || [];
+    if (group.length <= 1) return 0;
+    const pos = group.indexOf(sigla);
+    const spread = (group.length - 1) * 8;
+    return -spread / 2 + pos * 8;
   }
 
   return (
     <div className="overflow-x-auto">
       <svg viewBox={`0 0 ${largura} ${altura}`} className="w-full min-w-[600px]" role="img" aria-label={ariaLabel}>
-        {/* grid horizontal */}
+        {zonaOtima && <rect x={margem.left} y={y(Math.min(zonaOtima.max, yMax))} width={innerW} height={y(Math.max(zonaOtima.min, yMin)) - y(Math.min(zonaOtima.max, yMax))} fill="#4AE23D" fillOpacity="0.13"/>}
+        {zonaOtima && <text x={margem.left + 6} y={y(Math.min(zonaOtima.max, yMax)) + 14} fontSize="9" fill="#00952A" fontFamily="monospace" fontWeight="700">▲ {zonaOtima.label}</text>}
+        {zonaIntermediaria && <rect x={margem.left} y={y(Math.min(zonaIntermediaria.max, yMax))} width={innerW} height={y(Math.max(zonaIntermediaria.min, yMin)) - y(Math.min(zonaIntermediaria.max, yMax))} fill="#FFCE00" fillOpacity="0.18"/>}
+        {zonaIntermediaria && <text x={margem.left + 6} y={y(Math.min(zonaIntermediaria.max, yMax)) + 14} fontSize="9" fill="#FF6700" fontFamily="monospace" fontWeight="700">⚠ {zonaIntermediaria.label}</text>}
+        {zonaAlerta && <rect x={margem.left} y={y(Math.min(zonaAlerta.max, yMax))} width={innerW} height={y(Math.max(zonaAlerta.min, yMin)) - y(Math.min(zonaAlerta.max, yMax))} fill="#ED282C" fillOpacity="0.10"/>}
+        {zonaAlerta && <text x={margem.left + 6} y={y(Math.min(zonaAlerta.max, yMax)) + 14} fontSize="9" fill="#ED282C" fontFamily="monospace" fontWeight="700">▼ {zonaAlerta.label}</text>}
+
         {gridValues.map((v) => (
           <g key={v}>
-            <line x1={margem.left} x2={largura - margem.right} y1={y(v)} y2={y(v)} stroke="#1C1A17" strokeOpacity="0.08" />
-            <text x={margem.left - 8} y={y(v)} textAnchor="end" dominantBaseline="middle" className="font-mono-label" fontSize="10" fill="#6B6357">
-              {formatarTick(v)}
-            </text>
+            <line x1={margem.left} x2={largura - margem.right} y1={y(v)} y2={y(v)} stroke="#0C2856" strokeOpacity="0.07"/>
+            <text x={margem.left - 8} y={y(v)} textAnchor="end" dominantBaseline="middle" fontSize="11" fill="#6B7A8D" fontFamily="monospace">{formatarTick(v)}</text>
           </g>
         ))}
 
-        {/* linha de referência/meta, se houver */}
-        {yRef !== null && (
-          <>
-            <line x1={margem.left} x2={largura - margem.right} y1={yRef} y2={yRef} stroke={corAbaixoReferencia || "#A13D2B"} strokeWidth="1.5" strokeDasharray="4 3" />
-            <text x={largura - margem.right} y={yRef - 6} textAnchor="end" className="font-mono-label" fontSize="10" fill={corAbaixoReferencia || "#A13D2B"}>
-              {labelReferencia}
-            </text>
-          </>
-        )}
+        {yRef !== null && <>
+          <line x1={margem.left} x2={largura - margem.right} y1={yRef} y2={yRef} stroke={corAbaixoReferencia || "#ED282C"} strokeWidth="1.5" strokeDasharray="5 4"/>
+          <text x={largura - margem.right} y={yRef - 6} textAnchor="end" fontSize="10" fill={corAbaixoReferencia || "#ED282C"} fontFamily="monospace">{labelReferencia}</text>
+        </>}
 
-        {/* eixo x labels */}
         {meses.map((m, i) => (
-          <text key={i} x={x(i)} y={altura - 10} textAnchor="middle" className="font-mono-label" fontSize="10" fill="#6B6357">
-            {m.label}
-          </text>
+          <text key={i} x={x(i)} y={altura - 8} textAnchor="middle" fontSize="11" fill="#6B7A8D" fontFamily="monospace">{m.label}</text>
         ))}
 
-        {/* linhas por hospital (somente os filtrados) */}
-        {hospitaisExibidos.map((h) => {
+        {!apenasPonotos && hospitaisExibidos.map((h) => {
           const dados = historico[h.sigla];
-          const pathD = dados
-            .filter((d) => campoValor(d) !== null)
-            .map((d, i) => `${i === 0 ? "M" : "L"}${x(dados.indexOf(d))},${y(campoValor(d))}`)
-            .join(" ");
-          return (
-            <g key={h.sigla}>
-              <path d={pathD} fill="none" stroke={h.cor} strokeWidth={1.75} />
-              {dados.map((d, i) => {
-                const valor = campoValor(d);
-                if (valor === null) return null;
-                const isSelected = pontoSelecionado && pontoSelecionado.sigla === h.sigla && pontoSelecionado.idx === i;
-                return (
-                  <circle
-                    key={i}
-                    cx={x(i)}
-                    cy={y(valor)}
-                    r={isSelected ? 6 : 3.5}
-                    fill={corDoPonto(h, valor)}
-                    stroke={isSelected ? "#1C1A17" : "none"}
-                    strokeWidth={isSelected ? 2 : 0}
-                    style={{ cursor: "pointer" }}
-                    onClick={() => onSelecionarPonto({ sigla: h.sigla, idx: i })}
-                  />
-                );
-              })}
-            </g>
-          );
+          const pts = dados.map((d, i) => { const v = campoValor(d); return v !== null ? `${x(i) + jitterX(h.sigla, i, v)},${y(v)}` : null; }).filter(Boolean);
+          if (pts.length < 2) return null;
+          return <polyline key={h.sigla} points={pts.join(" ")} fill="none" stroke={h.cor} strokeWidth="1.8" strokeOpacity="0.6"/>;
         })}
+
+        {hospitaisExibidos.map((h) =>
+          historico[h.sigla].map((d, i) => {
+            const valor = campoValor(d);
+            if (valor === null) return null;
+            const isSelected = pontoSelecionado && pontoSelecionado.sigla === h.sigla && pontoSelecionado.idx === i;
+            const cor = corDoPonto(h);
+            const jx = jitterX(h.sigla, i, valor);
+            const cx = x(i) + jx;
+            const cy = y(valor);
+            return (
+              <g key={`${h.sigla}-${i}`} style={{ cursor: "pointer" }} onClick={() => onSelecionarPonto({ sigla: h.sigla, idx: i })}>
+                <circle cx={cx} cy={cy} r={isSelected ? 15 : 12} fill={cor} fillOpacity={isSelected ? 1 : 0.9} stroke="white" strokeWidth="2"/>
+                <text x={cx} y={cy} textAnchor="middle" dominantBaseline="middle" fontSize="8" fill="white" fontFamily="monospace" fontWeight="700" style={{ pointerEvents: "none" }}>{h.sigla}</text>
+              </g>
+            );
+          })
+        )}
       </svg>
     </div>
   );
 }
 
-// ---------- Tela: Home ----------
-// ---------- Tela: Seleção de produto ----------
 function TelaSelecaoProduto({ onIrPara }) {
   return (
-    <div className="min-h-screen flex flex-col text-[#1C1A17]" style={{ fontFamily: "'Fraunces', Georgia, serif", backgroundColor: "#F4F7FA" }}>
+    <div className="min-h-screen flex flex-col relative overflow-hidden"
+      style={{ backgroundColor: "#F8FAFD", fontFamily: "'Fraunces', Georgia, serif" }}>
       <FontesGlobais />
 
-      {/* Elementos decorativos de fundo */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 0 }}>
-        {/* Pontos decorativos canto superior direito */}
-        <svg width="160" height="160" viewBox="0 0 160 160" className="absolute top-0 right-0 opacity-20">
-          {Array.from({ length: 6 }, (_, r) => Array.from({ length: 6 }, (_, c) => (
-            <circle key={`${r}-${c}`} cx={16 + c * 24} cy={16 + r * 24} r="2.5" fill="#3D5A73" />
-          )))}
+      {/* Blob colorido canto superior esquerdo */}
+      <div className="absolute top-0 left-0 pointer-events-none" style={{ zIndex: 0, width: 320, height: 420 }}>
+        <svg viewBox="0 0 320 420" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: "100%", height: "100%" }}>
+          <path d="M0 0 C80 0 160 40 180 120 C220 240 140 340 60 380 C20 400 0 420 0 420 Z" fill="url(#blobGrad)" opacity="0.88"/>
+          <defs>
+            <linearGradient id="blobGrad" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor="#0068FF"/>
+              <stop offset="40%" stopColor="#3AE8C6"/>
+              <stop offset="100%" stopColor="#4AE23D"/>
+            </linearGradient>
+          </defs>
         </svg>
-        {/* Pontos decorativos canto inferior esquerdo */}
-        <svg width="160" height="160" viewBox="0 0 160 160" className="absolute bottom-0 left-0 opacity-20">
-          {Array.from({ length: 6 }, (_, r) => Array.from({ length: 6 }, (_, c) => (
-            <circle key={`${r}-${c}`} cx={16 + c * 24} cy={16 + r * 24} r="2.5" fill="#1F5A4A" />
-          )))}
-        </svg>
-        {/* Ícone gráfico inferior esquerdo */}
-        <div className="absolute bottom-32 left-8 opacity-10">
-          <BarChart3 size={80} style={{ color: "#3D5A73" }} />
-        </div>
-        {/* Ícone calendário inferior direito */}
-        <div className="absolute bottom-28 right-10 opacity-10">
-          <FileText size={72} style={{ color: "#1F5A4A" }} />
-        </div>
       </div>
 
+      {/* Pontilhados decorativos canto superior direito */}
+      <div className="absolute top-4 right-6 pointer-events-none" style={{ zIndex: 0, opacity: 0.18 }}>
+        <svg width="160" height="120" viewBox="0 0 160 120">
+          {Array.from({ length: 6 }, (_, r) => Array.from({ length: 8 }, (_, c) => (
+            <circle key={`${r}-${c}`} cx={10 + c * 20} cy={10 + r * 20} r="2.5" fill="#0C2856"/>
+          )))}
+        </svg>
+      </div>
+
+      {/* Pontilhados decorativos canto inferior esquerdo */}
+      <div className="absolute bottom-20 left-4 pointer-events-none" style={{ zIndex: 0, opacity: 0.13 }}>
+        <svg width="140" height="100" viewBox="0 0 140 100">
+          {Array.from({ length: 5 }, (_, r) => Array.from({ length: 7 }, (_, c) => (
+            <circle key={`${r}-${c}`} cx={10 + c * 20} cy={10 + r * 20} r="2.5" fill="#0C2856"/>
+          )))}
+        </svg>
+      </div>
+
+      {/* Prédio/palácio azulado canto direito */}
+      <div className="absolute right-0 top-0 bottom-0 pointer-events-none" style={{ zIndex: 0, width: "42%", minWidth: 280 }}>
+        <svg viewBox="0 0 500 700" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: "100%", height: "100%" }} opacity="0.13">
+          {/* Silhueta do palácio simplificada */}
+          <rect x="60" y="300" width="380" height="280" rx="2" fill="#0068FF"/>
+          <rect x="80" y="260" width="340" height="60" rx="2" fill="#0068FF"/>
+          <rect x="100" y="220" width="300" height="60" rx="2" fill="#0068FF"/>
+          {/* Torre central */}
+          <rect x="200" y="120" width="100" height="140" rx="2" fill="#0068FF"/>
+          <ellipse cx="250" cy="120" rx="50" ry="30" fill="#0068FF"/>
+          <rect x="230" y="80" width="40" height="50" rx="2" fill="#0068FF"/>
+          {/* Janelas */}
+          {[100,150,200,250,300,350].map(x => [320,380,440].map(y => (
+            <rect key={`${x}-${y}`} x={x} y={y} width="22" height="30" rx="2" fill="#F8FAFD" opacity="0.6"/>
+          )))}
+          {/* Arcos térreo */}
+          {[80,140,200,260,320,380].map(x => (
+            <path key={x} d={`M${x} 580 Q${x+20} 550 ${x+40} 580 L${x+40} 580 L${x} 580`} fill="#F8FAFD" opacity="0.5"/>
+          ))}
+          {/* Palmeira */}
+          <rect x="160" y="400" width="8" height="160" fill="#0068FF"/>
+          <ellipse cx="164" cy="390" rx="30" ry="20" fill="#0068FF" opacity="0.7"/>
+          <ellipse cx="140" cy="400" rx="25" ry="12" fill="#0068FF" opacity="0.5" transform="rotate(-20 140 400)"/>
+          <ellipse cx="188" cy="400" rx="25" ry="12" fill="#0068FF" opacity="0.5" transform="rotate(20 188 400)"/>
+          {/* Névoa/fade bottom */}
+          <rect x="0" y="500" width="500" height="200" fill="url(#fadeBlue)"/>
+          <defs>
+            <linearGradient id="fadeBlue" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#F8FAFD" stopOpacity="0"/>
+              <stop offset="100%" stopColor="#F8FAFD" stopOpacity="1"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+
+      {/* Ondas coloridas no rodapé */}
+      <div className="absolute bottom-0 left-0 right-0 pointer-events-none" style={{ zIndex: 0, height: 80 }}>
+        <svg viewBox="0 0 1200 80" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: "100%", height: "100%" }} preserveAspectRatio="none">
+          <path d="M0 50 Q200 20 400 45 T800 40 T1200 50" stroke="#4400FF" strokeWidth="2.5" fill="none" opacity="0.5"/>
+          <path d="M0 58 Q200 30 400 55 T800 50 T1200 60" stroke="#4AE23D" strokeWidth="2" fill="none" opacity="0.5"/>
+          <path d="M0 66 Q200 40 400 63 T800 58 T1200 68" stroke="#FFCE00" strokeWidth="2" fill="none" opacity="0.5"/>
+          <path d="M0 74 Q200 48 400 71 T800 66 T1200 76" stroke="#ED282C" strokeWidth="2" fill="none" opacity="0.5"/>
+        </svg>
+      </div>
+
+      {/* Conteúdo principal */}
       <div className="relative flex flex-col flex-1" style={{ zIndex: 1 }}>
-        {/* Cabeçalho */}
-        <header className="pt-8 pb-4 px-6">
-          <div className="max-w-4xl mx-auto">
-            {/* Logos centralizadas */}
-            <div className="flex items-center justify-center gap-6 mb-5">
-              <img src={LOGO_PE_BASE64} alt="Governo de Pernambuco" style={{ height: 52 }} />
-              <div className="w-px self-stretch" style={{ backgroundColor: "#CBD5E1" }} />
-              <img src={LOGO_SCI_BASE64} alt="SCI — Sistema de Controle Interno" style={{ height: 46 }} />
-            </div>
-            {/* Título institucional */}
-            <p className="font-display text-xl font-semibold text-center" style={{ color: "#1C3A5A" }}>
-              Controladoria-Geral do Estado de Pernambuco
-            </p>
-            <p className="font-mono-label text-[11px] uppercase tracking-[0.18em] text-center mt-1" style={{ color: "#6B7A8D" }}>
-              Unidades de Controle Interno — SES-PE
-            </p>
+        {/* Header logos */}
+        <header className="pt-7 pb-2 px-8">
+          <div className="max-w-5xl mx-auto flex items-center justify-center gap-7">
+            <img src={LOGO_PE_BASE64} alt="Governo de Pernambuco" style={{ height: 62 }} />
+            <div className="w-px self-stretch" style={{ backgroundColor: "#CBD5E1" }} />
+            <img src={LOGO_SCI_BASE64} alt="SCI — Sistema de Controle Interno" style={{ height: 54 }} />
           </div>
         </header>
 
-        {/* Conteúdo principal */}
-        <main className="flex-1 px-6 py-6">
-          <div className="max-w-4xl mx-auto">
-            {/* Subtítulo + linha */}
-            <div className="text-center mb-7">
-              <p className="font-mono-label text-[11px] uppercase tracking-[0.2em] mb-3" style={{ color: "#6B7A8D" }}>
-                Qual área você deseja acompanhar?
+        <main className="flex-1 px-8 py-4 pb-20">
+          <div className="max-w-5xl mx-auto">
+            {/* Título institucional */}
+            <div className="text-center mb-6">
+              <p className="font-display text-2xl font-bold mb-1" style={{ color: "#0C2856" }}>
+                Controladoria-Geral do Estado de Pernambuco
               </p>
-              <h1 className="font-display text-4xl font-bold mb-4" style={{ color: "#1C3A5A" }}>
-                Selecione um produto
-              </h1>
+              <p className="font-mono-label text-xs uppercase tracking-[0.22em]" style={{ color: "#6B7A8D" }}>
+                Unidades de Controle Interno — SES-PE
+              </p>
             </div>
 
-            {/* Cards dos produtos */}
-            <div className="grid sm:grid-cols-2 gap-5 mb-8">
+            {/* Área de seleção */}
+            <div className="flex flex-col lg:flex-row gap-8 items-start">
+              {/* Texto esquerdo */}
+              <div className="lg:w-2/5">
+                <p className="font-mono-label text-xs uppercase tracking-[0.2em] mb-2" style={{ color: "#0C2856" }}>
+                  Qual área você deseja acompanhar?
+                </p>
+                {/* Linha colorida decorativa */}
+                <div className="flex gap-1 mb-4">
+                  {["#0C2856","#0068FF","#4AE23D","#FFCE00"].map(c => (
+                    <div key={c} style={{ width: 28, height: 3, backgroundColor: c, borderRadius: 2 }} />
+                  ))}
+                </div>
+                <h1 className="font-display font-bold mb-3 leading-tight" style={{ fontSize: "clamp(2rem,4vw,3rem)", color: "#0C2856" }}>
+                  Selecione um<br/><span style={{ color: "#0C2856" }}>produto</span>
+                </h1>
+                <p className="font-ui text-sm leading-relaxed" style={{ color: "#4A5568" }}>
+                  Acompanhe e fortaleça o controle das despesas e recursos da saúde com informações confiáveis e gestão eficiente.
+                </p>
+              </div>
 
-              {/* Card Alimentação Hospitalar */}
-              <button
-                onClick={() => onIrPara("alimentacao")}
-                className="text-left rounded-2xl overflow-hidden transition-all hover:shadow-xl hover:-translate-y-1 group"
-                style={{ backgroundColor: "#ffffff", border: "1.5px solid #C8E6C9", boxShadow: "0 4px 20px rgba(31,90,74,0.08)" }}
-              >
-                {/* Área ilustrativa */}
-                <div className="relative h-44 flex items-end justify-center overflow-hidden"
-                  style={{ background: "linear-gradient(135deg, #E8F5E9 0%, #F1F8E9 60%, #E0F2F1 100%)" }}>
-                  {/* Onda decorativa no fundo */}
-                  <svg viewBox="0 0 400 80" className="absolute bottom-0 w-full" preserveAspectRatio="none">
-                    <path d="M0,40 Q100,10 200,40 T400,40 L400,80 L0,80 Z" fill="#1F5A4A" opacity="0.15" />
-                    <path d="M0,55 Q100,30 200,55 T400,55 L400,80 L0,80 Z" fill="#1F5A4A" opacity="0.25" />
-                  </svg>
-                  {/* Ilustração SVG: sino + prancheta */}
-                  <svg viewBox="0 0 220 140" className="absolute inset-0 w-full h-full" style={{ opacity: 0.9 }}>
-                    {/* Prancheta */}
-                    <rect x="30" y="20" width="80" height="100" rx="6" fill="#fff" stroke="#A5D6A7" strokeWidth="2"/>
-                    <rect x="55" y="12" width="30" height="16" rx="4" fill="#A5D6A7"/>
-                    <line x1="42" y1="50" x2="98" y2="50" stroke="#A5D6A7" strokeWidth="2"/>
-                    <line x1="42" y1="63" x2="98" y2="63" stroke="#A5D6A7" strokeWidth="2"/>
-                    <line x1="42" y1="76" x2="80" y2="76" stroke="#A5D6A7" strokeWidth="2"/>
-                    <circle cx="40" cy="50" r="4" fill="#1F5A4A"/>
-                    <polyline points="38,50 40,53 44,46" stroke="#fff" strokeWidth="1.5" fill="none"/>
-                    <circle cx="40" cy="63" r="4" fill="#1F5A4A"/>
-                    <polyline points="38,63 40,66 44,59" stroke="#fff" strokeWidth="1.5" fill="none"/>
-                    <circle cx="40" cy="76" r="4" fill="#A5D6A7"/>
-                    {/* Sino */}
-                    <ellipse cx="155" cy="95" rx="28" ry="8" fill="#1F5A4A" opacity="0.8"/>
-                    <path d="M127,95 Q127,60 155,55 Q183,60 183,95 Z" fill="#1F5A4A" opacity="0.9"/>
-                    <rect x="150" y="48" width="10" height="10" rx="3" fill="#A5D6A7"/>
-                    <circle cx="155" cy="106" r="5" fill="#A5D6A7"/>
-                    {/* Cruz */}
-                    <circle cx="155" cy="76" r="12" fill="white" opacity="0.9"/>
-                    <line x1="155" y1="68" x2="155" y2="84" stroke="#1F5A4A" strokeWidth="3" strokeLinecap="round"/>
-                    <line x1="147" y1="76" x2="163" y2="76" stroke="#1F5A4A" strokeWidth="3" strokeLinecap="round"/>
-                    {/* Folhas decorativas */}
-                    <ellipse cx="105" cy="80" rx="14" ry="6" fill="#81C784" opacity="0.5" transform="rotate(-30 105 80)"/>
-                    <ellipse cx="195" cy="70" rx="12" ry="5" fill="#81C784" opacity="0.4" transform="rotate(20 195 70)"/>
-                  </svg>
-                  {/* Badge ícone inferior esquerdo */}
-                  <div className="absolute bottom-3 left-3 w-9 h-9 rounded-full flex items-center justify-center shadow" style={{ backgroundColor: "#fff" }}>
-                    <BarChart3 size={16} style={{ color: "#1F5A4A" }} />
-                  </div>
-                </div>
-                {/* Texto do card */}
-                <div className="p-5 flex items-start justify-between gap-3">
-                  <div className="flex-1">
-                    <div className="w-8 h-1 rounded-full mb-3" style={{ backgroundColor: "#1F5A4A" }} />
-                    <h2 className="font-display text-xl font-bold mb-2 leading-tight" style={{ color: "#1F5A4A" }}>
-                      Alimentação hospitalar
-                    </h2>
-                    <p className="font-ui text-sm leading-relaxed" style={{ color: "#4A5568" }}>
-                      Controle de acesso e faturamento, indicadores e economia de alimentação hospitalar.
-                    </p>
-                  </div>
-                  <div className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center mt-1 transition-transform group-hover:translate-x-1"
-                    style={{ backgroundColor: "#1F5A4A" }}>
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                      <path d="M3 8h10M9 4l4 4-4 4" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              {/* Cards direita */}
+              <div className="lg:w-3/5 grid sm:grid-cols-2 gap-4 w-full">
+                {/* Card Alimentação */}
+                <button onClick={() => onIrPara("alimentacao")}
+                  className="text-left rounded-2xl overflow-hidden transition-all hover:shadow-xl hover:-translate-y-1 group w-full"
+                  style={{ backgroundColor: "#fff", border: "1.5px solid #C8E6C9", boxShadow: "0 2px 16px rgba(0,104,255,0.07)" }}>
+                  {/* Ilustração */}
+                  <div className="relative h-36 flex items-end justify-center overflow-hidden"
+                    style={{ background: "linear-gradient(135deg,#E8F5E9,#F1F8E9,#E0F2F1)" }}>
+                    <svg viewBox="0 0 400 80" className="absolute bottom-0 w-full" preserveAspectRatio="none">
+                      <path d="M0,40 Q100,10 200,40 T400,40 L400,80 L0,80 Z" fill="#00952A" opacity="0.18"/>
+                      <path d="M0,55 Q100,30 200,55 T400,55 L400,80 L0,80 Z" fill="#00952A" opacity="0.28"/>
                     </svg>
+                    <svg viewBox="0 0 220 130" className="absolute inset-0 w-full h-full" opacity="0.92">
+                      <rect x="30" y="18" width="78" height="96" rx="6" fill="#fff" stroke="#A5D6A7" strokeWidth="2"/>
+                      <rect x="54" y="10" width="30" height="16" rx="4" fill="#A5D6A7"/>
+                      {[48,61,74].map((y,i) => <g key={y}>
+                        <circle cx="40" cy={y} r="4" fill={i<2?"#00952A":"#A5D6A7"}/>
+                        {i<2&&<polyline points={`38,${y} 40,${y+3} 44,${y-4}`} stroke="#fff" strokeWidth="1.5" fill="none"/>}
+                        <line x1="48" x2="96" y1={y} y2={y} stroke="#A5D6A7" strokeWidth="1.5"/>
+                      </g>)}
+                      <ellipse cx="155" cy="92" rx="28" ry="8" fill="#00952A" opacity="0.8"/>
+                      <path d="M127,92 Q127,57 155,52 Q183,57 183,92 Z" fill="#00952A" opacity="0.9"/>
+                      <rect x="150" y="45" width="10" height="10" rx="3" fill="#A5D6A7"/>
+                      <circle cx="155" cy="73" r="12" fill="white" opacity="0.9"/>
+                      <line x1="155" y1="65" x2="155" y2="81" stroke="#00952A" strokeWidth="3" strokeLinecap="round"/>
+                      <line x1="147" y1="73" x2="163" y2="73" stroke="#00952A" strokeWidth="3" strokeLinecap="round"/>
+                    </svg>
+                    <div className="absolute bottom-2 left-2 w-8 h-8 rounded-full flex items-center justify-center shadow" style={{backgroundColor:"#fff"}}>
+                      <BarChart3 size={14} style={{color:"#00952A"}}/>
+                    </div>
                   </div>
-                </div>
-              </button>
+                  <div className="p-4 flex items-start justify-between gap-2">
+                    <div className="flex-1">
+                      <div className="w-7 h-1 rounded-full mb-2" style={{backgroundColor:"#00952A"}}/>
+                      <p className="font-display text-base font-bold mb-1" style={{color:"#00952A"}}>Alimentação hospitalar</p>
+                      <p className="font-ui text-xs leading-relaxed" style={{color:"#4A5568"}}>Controle de acesso e faturamento, indicadores e economia de alimentação hospitalar.</p>
+                    </div>
+                    <div className="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center mt-1 transition-transform group-hover:translate-x-1" style={{backgroundColor:"#00952A"}}>
+                      <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    </div>
+                  </div>
+                </button>
 
-              {/* Card Medicamentos */}
-              <button
-                onClick={() => onIrPara("medicamentos")}
-                className="text-left rounded-2xl overflow-hidden transition-all hover:shadow-xl hover:-translate-y-1 group"
-                style={{ backgroundColor: "#ffffff", border: "1.5px solid #BBDEFB", boxShadow: "0 4px 20px rgba(61,90,115,0.08)" }}
-              >
-                {/* Área ilustrativa */}
-                <div className="relative h-44 flex items-end justify-center overflow-hidden"
-                  style={{ background: "linear-gradient(135deg, #E3F2FD 0%, #EDE7F6 60%, #E8F5E9 100%)" }}>
-                  <svg viewBox="0 0 400 80" className="absolute bottom-0 w-full" preserveAspectRatio="none">
-                    <path d="M0,40 Q100,10 200,40 T400,40 L400,80 L0,80 Z" fill="#3D5A73" opacity="0.15" />
-                    <path d="M0,55 Q100,30 200,55 T400,55 L400,80 L0,80 Z" fill="#3D5A73" opacity="0.25" />
-                  </svg>
-                  {/* Ilustração SVG: frasco + comprimidos */}
-                  <svg viewBox="0 0 220 140" className="absolute inset-0 w-full h-full" style={{ opacity: 0.9 }}>
-                    {/* Frasco */}
-                    <rect x="80" y="30" width="60" height="80" rx="10" fill="#3D5A73" opacity="0.85"/>
-                    <rect x="90" y="18" width="40" height="18" rx="5" fill="#5B7A91"/>
-                    <rect x="80" y="30" width="60" height="20" rx="0" fill="#5B7A91" opacity="0.6"/>
-                    {/* Cruz no frasco */}
-                    <circle cx="110" cy="80" r="18" fill="white" opacity="0.9"/>
-                    <line x1="110" y1="68" x2="110" y2="92" stroke="#3D5A73" strokeWidth="4" strokeLinecap="round"/>
-                    <line x1="98" y1="80" x2="122" y2="80" stroke="#3D5A73" strokeWidth="4" strokeLinecap="round"/>
-                    {/* Comprimidos */}
-                    <rect x="148" y="70" width="36" height="18" rx="9" fill="#90CAF9" opacity="0.9"/>
-                    <line x1="166" y1="70" x2="166" y2="88" stroke="#fff" strokeWidth="1.5"/>
-                    <rect x="152" y="95" width="36" height="18" rx="9" fill="#CE93D8" opacity="0.8"/>
-                    <line x1="170" y1="95" x2="170" y2="113" stroke="#fff" strokeWidth="1.5"/>
-                    <rect x="38" y="75" width="36" height="18" rx="9" fill="#A5D6A7" opacity="0.85"/>
-                    <line x1="56" y1="75" x2="56" y2="93" stroke="#fff" strokeWidth="1.5"/>
-                    {/* Blister */}
-                    <rect x="32" y="100" width="52" height="32" rx="4" fill="#B0BEC5" opacity="0.6"/>
-                    {[0,1,2].map(c => [0,1].map(r => (
-                      <ellipse key={`${c}-${r}`} cx={41 + c*16} cy={110 + r*12} rx="6" ry="5" fill="#90CAF9" opacity="0.8"/>
-                    )))}
-                    {/* Folhas decorativas */}
-                    <ellipse cx="170" cy="45" rx="14" ry="6" fill="#81C784" opacity="0.4" transform="rotate(25 170 45)"/>
-                    <ellipse cx="50" cy="55" rx="12" ry="5" fill="#81C784" opacity="0.35" transform="rotate(-15 50 55)"/>
-                  </svg>
-                  {/* Badge ícone inferior esquerdo */}
-                  <div className="absolute bottom-3 left-3 w-9 h-9 rounded-full flex items-center justify-center shadow" style={{ backgroundColor: "#fff" }}>
-                    <Pill size={16} style={{ color: "#3D5A73" }} />
-                  </div>
-                </div>
-                {/* Texto do card */}
-                <div className="p-5 flex items-start justify-between gap-3">
-                  <div className="flex-1">
-                    <div className="w-8 h-1 rounded-full mb-3" style={{ backgroundColor: "#3D5A73" }} />
-                    <h2 className="font-display text-xl font-bold mb-2 leading-tight" style={{ color: "#3D5A73" }}>
-                      Medicamentos
-                    </h2>
-                    <p className="font-ui text-sm leading-relaxed" style={{ color: "#4A5568" }}>
-                      Inventários periódicos e testes de acurácia da curva ABC, por estoque.
-                    </p>
-                  </div>
-                  <div className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center mt-1 transition-transform group-hover:translate-x-1"
-                    style={{ backgroundColor: "#3D5A73" }}>
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                      <path d="M3 8h10M9 4l4 4-4 4" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                {/* Card Medicamentos */}
+                <button onClick={() => onIrPara("medicamentos")}
+                  className="text-left rounded-2xl overflow-hidden transition-all hover:shadow-xl hover:-translate-y-1 group w-full"
+                  style={{ backgroundColor: "#fff", border: "1.5px solid #BBDEFB", boxShadow: "0 2px 16px rgba(0,104,255,0.07)" }}>
+                  <div className="relative h-36 flex items-end justify-center overflow-hidden"
+                    style={{ background: "linear-gradient(135deg,#E3F2FD,#EDE7F6,#E8F5E9)" }}>
+                    <svg viewBox="0 0 400 80" className="absolute bottom-0 w-full" preserveAspectRatio="none">
+                      <path d="M0,40 Q100,10 200,40 T400,40 L400,80 L0,80 Z" fill="#0068FF" opacity="0.18"/>
+                      <path d="M0,55 Q100,30 200,55 T400,55 L400,80 L0,80 Z" fill="#0068FF" opacity="0.28"/>
                     </svg>
+                    <svg viewBox="0 0 220 130" className="absolute inset-0 w-full h-full" opacity="0.92">
+                      <rect x="80" y="28" width="60" height="78" rx="10" fill="#0068FF" opacity="0.85"/>
+                      <rect x="90" y="16" width="40" height="18" rx="5" fill="#5B9AFF"/>
+                      <rect x="80" y="28" width="60" height="18" rx="0" fill="#5B9AFF" opacity="0.6"/>
+                      <circle cx="110" cy="76" r="17" fill="white" opacity="0.9"/>
+                      <line x1="110" y1="65" x2="110" y2="87" stroke="#0068FF" strokeWidth="4" strokeLinecap="round"/>
+                      <line x1="99" y1="76" x2="121" y2="76" stroke="#0068FF" strokeWidth="4" strokeLinecap="round"/>
+                      <rect x="148" y="68" width="34" height="16" rx="8" fill="#90CAF9" opacity="0.9"/>
+                      <line x1="165" y1="68" x2="165" y2="84" stroke="#fff" strokeWidth="1.5"/>
+                      <rect x="152" y="90" width="34" height="16" rx="8" fill="#CE93D8" opacity="0.8"/>
+                      <line x1="169" y1="90" x2="169" y2="106" stroke="#fff" strokeWidth="1.5"/>
+                      <rect x="38" y="72" width="34" height="16" rx="8" fill="#A5D6A7" opacity="0.85"/>
+                      <line x1="55" y1="72" x2="55" y2="88" stroke="#fff" strokeWidth="1.5"/>
+                    </svg>
+                    <div className="absolute bottom-2 left-2 w-8 h-8 rounded-full flex items-center justify-center shadow" style={{backgroundColor:"#fff"}}>
+                      <Pill size={14} style={{color:"#0068FF"}}/>
+                    </div>
                   </div>
-                </div>
-              </button>
+                  <div className="p-4 flex items-start justify-between gap-2">
+                    <div className="flex-1">
+                      <div className="w-7 h-1 rounded-full mb-2" style={{backgroundColor:"#0068FF"}}/>
+                      <p className="font-display text-base font-bold mb-1" style={{color:"#0C2856"}}>Medicamentos</p>
+                      <p className="font-ui text-xs leading-relaxed" style={{color:"#4A5568"}}>Inventários periódicos e verificações de acurácia da curva ABC, por estoque.</p>
+                    </div>
+                    <div className="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center mt-1 transition-transform group-hover:translate-x-1" style={{backgroundColor:"#0068FF"}}>
+                      <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    </div>
+                  </div>
+                </button>
+              </div>
             </div>
 
             {/* Rodapé institucional */}
-            <div className="rounded-xl px-5 py-4 flex flex-wrap items-center justify-between gap-4 mb-6"
-              style={{ backgroundColor: "#fff", border: "1px solid #E2E8F0" }}>
+            <div className="mt-7 rounded-xl px-5 py-3 flex flex-wrap items-center justify-between gap-3"
+              style={{ backgroundColor: "rgba(12,40,86,0.04)", border: "1px solid #E2E8F0" }}>
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: "#EEF2F7" }}>
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                    <path d="M8 1L10 6H15L11 9.5L12.5 15L8 12L3.5 15L5 9.5L1 6H6Z" fill="#3D5A73" opacity="0.7"/>
-                  </svg>
+                <div className="w-7 h-7 rounded-full flex items-center justify-center" style={{backgroundColor:"#E3F2FD"}}>
+                  <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M7 1L8.5 5H13L9.5 7.5L11 12L7 9.5L3 12L4.5 7.5L1 5H5.5Z" fill="#0068FF" opacity="0.8"/></svg>
                 </div>
                 <div>
-                  <p className="font-ui text-xs" style={{ color: "#6B7A8D" }}>Desenvolvido pela</p>
-                  <p className="font-ui text-sm font-semibold" style={{ color: "#1C3A5A" }}>Gerência Geral de Governança e Riscos</p>
+                  <p className="font-ui text-xs" style={{color:"#6B7A8D"}}>Desenvolvido pela</p>
+                  <p className="font-ui text-sm font-semibold" style={{color:"#0C2856"}}>Gerência Geral de Governança e Riscos</p>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: "#EEF2F7" }}>
-                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                    <rect x="1" y="3" width="12" height="8" rx="1.5" stroke="#3D5A73" strokeWidth="1.2"/>
-                    <path d="M1 4.5L7 8.5L13 4.5" stroke="#3D5A73" strokeWidth="1.2"/>
-                  </svg>
-                </div>
-                <p className="font-mono-label text-xs" style={{ color: "#4A5568" }}>sistemadecontroleinterno@scge.pe.gov.br</p>
-              </div>
+              <p className="font-mono-label text-xs" style={{color:"#6B7A8D"}}>sistemadecontroleinterno@scge.pe.gov.br</p>
             </div>
 
-            {/* Três pilares */}
-            <div className="grid grid-cols-3 gap-3">
-              {[
-                { icon: <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="2" width="14" height="14" rx="3" stroke="#1F5A4A" strokeWidth="1.5"/><path d="M5 9l2.5 2.5L13 6" stroke="#1F5A4A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>, titulo: "Transparência", descricao: "Informações confiáveis para melhor gestão", cor: "#1F5A4A" },
-                { icon: <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7" stroke="#8B7355" strokeWidth="1.5"/><circle cx="9" cy="9" r="3" stroke="#8B7355" strokeWidth="1.5"/><line x1="9" y1="2" x2="9" y2="6" stroke="#8B7355" strokeWidth="1.5" strokeLinecap="round"/></svg>, titulo: "Controle", descricao: "Acompanhamento contínuo e decisões assertivas", cor: "#8B7355" },
-                { icon: <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M3 14L7 9l3 3 5-6" stroke="#3D5A73" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>, titulo: "Eficiência", descricao: "Processos integrados para mais economia e segurança", cor: "#3D5A73" },
-              ].map(({ icon, titulo, descricao, cor }) => (
-                <div key={titulo} className="text-center p-4 rounded-xl" style={{ backgroundColor: "#fff", border: "1px solid #E2E8F0" }}>
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-2" style={{ backgroundColor: `${cor}18` }}>
-                    {icon}
-                  </div>
-                  <p className="font-display text-sm font-semibold mb-1" style={{ color: "#1C3A5A" }}>{titulo}</p>
-                  <p className="font-ui text-xs leading-snug" style={{ color: "#6B7A8D" }}>{descricao}</p>
-                </div>
-              ))}
-            </div>
           </div>
         </main>
       </div>
@@ -826,70 +852,228 @@ function TelaSelecaoProduto({ onIrPara }) {
   );
 }
 
-function TelaHome({ onIrPara, onVoltarProduto }) {
+function HomeTela({ titulo, subtitulo, acoes, onVoltar }) {
   return (
-    <div className="min-h-screen bg-[#F4F7FA] flex flex-col" style={{ fontFamily: "'Fraunces', Georgia, serif" }}>
+    <div className="min-h-screen flex flex-col relative overflow-hidden"
+      style={{ backgroundColor: "#F8FAFD", fontFamily: "'Fraunces', Georgia, serif" }}>
       <FontesGlobais />
-      <header className="bg-[#1C3A5A] text-white shadow-md">
+
+      {/* Blob decorativo canto superior esquerdo */}
+      <div className="absolute top-0 left-0 pointer-events-none" style={{ zIndex: 0, width: 220, height: 280 }}>
+        <svg viewBox="0 0 220 280" fill="none" style={{ width: "100%", height: "100%" }}>
+          <path d="M0 0 C60 0 120 30 130 90 C150 170 90 240 30 265 C10 273 0 280 0 280 Z" fill="url(#hbg)"/>
+          <defs>
+            <linearGradient id="hbg" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor="#0068FF"/>
+              <stop offset="50%" stopColor="#3AE8C6"/>
+              <stop offset="100%" stopColor="#4AE23D"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+
+      {/* Ondas rodapé */}
+      <div className="absolute bottom-0 left-0 right-0 pointer-events-none" style={{ zIndex: 0, height: 60 }}>
+        <svg viewBox="0 0 1200 60" fill="none" style={{ width: "100%", height: "100%" }} preserveAspectRatio="none">
+          <path d="M0 35 Q300 10 600 35 T1200 35" stroke="#0068FF" strokeWidth="2" fill="none" opacity="0.35"/>
+          <path d="M0 44 Q300 20 600 44 T1200 44" stroke="#4AE23D" strokeWidth="2" fill="none" opacity="0.35"/>
+          <path d="M0 53 Q300 30 600 53 T1200 53" stroke="#FFCE00" strokeWidth="1.5" fill="none" opacity="0.35"/>
+        </svg>
+      </div>
+
+      {/* Header */}
+      <header className="relative" style={{ zIndex: 1, backgroundColor: "#0C2856" }}>
         <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            {onVoltarProduto && (
-              <button onClick={onVoltarProduto} className="text-white/70 hover:text-white transition-colors flex-shrink-0" aria-label="Voltar">
-                <ArrowLeft size={18} />
-              </button>
-            )}
+            <button onClick={onVoltar} className="text-white/70 hover:text-white transition-colors flex-shrink-0" aria-label="Voltar">
+              <ArrowLeft size={18} />
+            </button>
             <img src={LOGO_PE_BASE64} alt="Governo de Pernambuco" style={{ height: 24 }} />
-            <div className="w-px h-6 bg-white/20" />
+            <div className="w-px h-6" style={{ backgroundColor: "rgba(255,255,255,0.2)" }} />
             <div>
-              <p className="font-ui text-sm font-semibold leading-tight">Alimentação Hospitalar</p>
-              <p className="font-mono-label text-[10px] text-white/60 uppercase tracking-wide">Controle Interno — SES-PE</p>
+              <p className="font-ui text-sm font-semibold text-white leading-tight">{titulo}</p>
+              <p className="font-mono-label text-[10px] text-white/55 uppercase tracking-wide">Controle Interno — SES-PE</p>
             </div>
           </div>
           <img src={LOGO_SCI_BASE64} alt="SCI" style={{ height: 30 }} />
         </div>
+        {/* Barra colorida abaixo do header */}
+        <div className="flex h-1">
+          {["#0068FF","#3AE8C6","#4AE23D","#FFCE00","#FF6700","#ED282C"].map(c => (
+            <div key={c} className="flex-1" style={{ backgroundColor: c }} />
+          ))}
+        </div>
       </header>
 
-      <main className="flex-1 flex items-center justify-center px-6 py-10">
+      {/* Botão flutuante */}
+      <button onClick={onVoltar} aria-label="Voltar"
+        className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 shadow-lg transition-all hover:opacity-90 active:scale-95"
+        style={{ backgroundColor: "#0C2856", color: "white", border: "2px solid #0068FF", borderRadius: "12px" }}>
+        <ArrowLeft size={16} />
+        <span className="font-mono-label text-[11px] uppercase tracking-wide">Voltar</span>
+      </button>
+
+      {/* Conteúdo */}
+      <main className="relative flex-1 flex items-center justify-center px-6 py-10" style={{ zIndex: 1 }}>
         <div className="max-w-3xl w-full">
-          <p className="font-mono-label text-[11px] uppercase tracking-[0.18em] text-[#6B7A8D] mb-2">O que você deseja fazer?</p>
-          <h1 className="font-display text-3xl font-bold mb-8" style={{ color: "#1C3A5A" }}>Selecione uma ação</h1>
+          <p className="font-mono-label text-[11px] uppercase tracking-[0.2em] mb-2" style={{ color: "#0068FF" }}>
+            O que você deseja fazer?
+          </p>
+          {/* Linha colorida */}
+          <div className="flex gap-1 mb-4">
+            {["#0C2856","#0068FF","#4AE23D","#FFCE00"].map(c => (
+              <div key={c} style={{ width: 24, height: 3, backgroundColor: c, borderRadius: 2 }} />
+            ))}
+          </div>
+          <h1 className="font-display text-3xl font-bold mb-2" style={{ color: "#0C2856" }}>
+            {subtitulo}
+          </h1>
+          <p className="font-ui text-sm mb-8" style={{ color: "#6B7A8D" }}>
+            Selecione uma das opções abaixo para continuar.
+          </p>
 
           <div className="grid sm:grid-cols-2 gap-5">
-            <button
-              onClick={() => onIrPara("monitoramento")}
-              className="text-left bg-white rounded-2xl p-6 hover:shadow-xl hover:-translate-y-1 transition-all group"
-              style={{ border: "1.5px solid #C8E6C9", boxShadow: "0 2px 12px rgba(31,90,74,0.07)" }}
-            >
-              <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4" style={{ backgroundColor: "#E8F5E9" }}>
-                <ClipboardList size={24} style={{ color: "#1F5A4A" }} />
-              </div>
-              <div className="w-6 h-0.5 rounded-full mb-3" style={{ backgroundColor: "#1F5A4A" }} />
-              <p className="font-display text-lg font-bold mb-2" style={{ color: "#1F5A4A" }}>Realizar monitoramento</p>
-              <p className="font-ui text-sm leading-relaxed" style={{ color: "#4A5568" }}>
-                Aplicar o checklist mensal e inserir dados de consumo de alimentação por hospital.
-              </p>
-            </button>
-
-            <button
-              onClick={() => onIrPara("painel")}
-              className="text-left bg-white rounded-2xl p-6 hover:shadow-xl hover:-translate-y-1 transition-all group"
-              style={{ border: "1.5px solid #BBDEFB", boxShadow: "0 2px 12px rgba(61,90,115,0.07)" }}
-            >
-              <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4" style={{ backgroundColor: "#E3F2FD" }}>
-                <BarChart3 size={24} style={{ color: "#3D5A73" }} />
-              </div>
-              <div className="w-6 h-0.5 rounded-full mb-3" style={{ backgroundColor: "#3D5A73" }} />
-              <p className="font-display text-lg font-bold mb-2" style={{ color: "#3D5A73" }}>Visualizar painel</p>
-              <p className="font-ui text-sm leading-relaxed" style={{ color: "#4A5568" }}>
-                Série histórica de biometria, ICA, indicadores de proporção e economia por hospital.
-              </p>
-            </button>
+            {acoes.map(({ label, descricao, icone: Icone, onClick }) => (
+              <button key={label} onClick={onClick}
+                className="text-left bg-white rounded-2xl p-6 hover:shadow-xl hover:-translate-y-1 transition-all group"
+                style={{ border: "1.5px solid #BBDEFB", boxShadow: "0 2px 16px rgba(12,40,86,0.07)" }}>
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4"
+                  style={{ backgroundColor: "#E3F2FD" }}>
+                  <Icone size={24} style={{ color: "#0C2856" }} />
+                </div>
+                <div className="w-6 h-0.5 rounded-full mb-3" style={{ backgroundColor: "#0C2856" }} />
+                <p className="font-display text-lg font-bold mb-2" style={{ color: "#0C2856" }}>{label}</p>
+                <p className="font-ui text-sm leading-relaxed" style={{ color: "#4A5568" }}>{descricao}</p>
+                <div className="mt-4 flex items-center gap-2" style={{ color: "#0068FF" }}>
+                  <span className="font-mono-label text-[11px] uppercase tracking-wide">Acessar</span>
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                    <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </div>
+              </button>
+            ))}
           </div>
         </div>
       </main>
     </div>
   );
 }
+
+function HomeTela({ titulo, subtitulo, onVoltar, acoes }) {
+  return (
+    <div className="min-h-screen flex flex-col relative overflow-hidden"
+      style={{ backgroundColor: "#F8FAFD", fontFamily: "'Fraunces', Georgia, serif" }}>
+      <FontesGlobais />
+
+      {/* Blob canto superior esquerdo */}
+      <div className="absolute top-0 left-0 pointer-events-none" style={{ zIndex: 0, width: 220, height: 280 }}>
+        <svg viewBox="0 0 220 280" fill="none" style={{ width: "100%", height: "100%" }}>
+          <path d="M0 0 C60 0 120 30 130 90 C150 170 90 240 30 265 C10 273 0 280 0 280 Z" fill="url(#hbg2)"/>
+          <defs>
+            <linearGradient id="hbg2" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor="#0068FF"/>
+              <stop offset="50%" stopColor="#3AE8C6"/>
+              <stop offset="100%" stopColor="#4AE23D"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+
+      {/* Ondas rodapé */}
+      <div className="absolute bottom-0 left-0 right-0 pointer-events-none" style={{ zIndex: 0, height: 60 }}>
+        <svg viewBox="0 0 1200 60" fill="none" style={{ width: "100%", height: "100%" }} preserveAspectRatio="none">
+          <path d="M0 35 Q300 10 600 35 T1200 35" stroke="#0068FF" strokeWidth="2" fill="none" opacity="0.35"/>
+          <path d="M0 44 Q300 20 600 44 T1200 44" stroke="#4AE23D" strokeWidth="2" fill="none" opacity="0.35"/>
+          <path d="M0 53 Q300 30 600 53 T1200 53" stroke="#FFCE00" strokeWidth="1.5" fill="none" opacity="0.35"/>
+        </svg>
+      </div>
+
+      {/* Header */}
+      <header className="relative" style={{ zIndex: 1, backgroundColor: "#0C2856" }}>
+        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <button onClick={onVoltar} className="text-white/70 hover:text-white transition-colors flex-shrink-0" aria-label="Voltar">
+              <ArrowLeft size={18} />
+            </button>
+            <img src={LOGO_PE_BASE64} alt="Governo de Pernambuco" style={{ height: 24 }} />
+            <div className="w-px h-6" style={{ backgroundColor: "rgba(255,255,255,0.2)" }} />
+            <div>
+              <p className="font-ui text-sm font-semibold text-white leading-tight">{titulo}</p>
+              <p className="font-mono-label text-[10px] uppercase tracking-wide" style={{ color: "rgba(255,255,255,0.55)" }}>
+                Controle Interno — SES-PE
+              </p>
+            </div>
+          </div>
+          <img src={LOGO_SCI_BASE64} alt="SCI" style={{ height: 30 }} />
+        </div>
+        <div className="flex h-1">
+          {["#0068FF","#3AE8C6","#4AE23D","#FFCE00","#FF6700","#ED282C"].map(c => (
+            <div key={c} className="flex-1" style={{ backgroundColor: c }} />
+          ))}
+        </div>
+      </header>
+
+      {/* Botão flutuante */}
+      <button onClick={onVoltar} aria-label="Voltar"
+        className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 shadow-lg transition-all hover:opacity-90 active:scale-95"
+        style={{ backgroundColor: "#0C2856", color: "white", border: "2px solid #0068FF", borderRadius: "12px" }}>
+        <ArrowLeft size={16} />
+        <span className="font-mono-label text-[11px] uppercase tracking-wide">Voltar</span>
+      </button>
+
+      <main className="relative flex-1 flex items-center justify-center px-6 py-10" style={{ zIndex: 1 }}>
+        <div className="max-w-3xl w-full">
+          <p className="font-mono-label text-[11px] uppercase tracking-[0.2em] mb-3" style={{ color: "#0068FF" }}>
+            O que você deseja fazer?
+          </p>
+          <div className="flex gap-1 mb-4">
+            {["#0C2856","#0068FF","#4AE23D","#FFCE00"].map(c => (
+              <div key={c} style={{ width: 24, height: 3, backgroundColor: c, borderRadius: 2 }} />
+            ))}
+          </div>
+          <h1 className="font-display text-3xl font-bold mb-2" style={{ color: "#0C2856" }}>{subtitulo}</h1>
+          <p className="font-ui text-sm mb-8" style={{ color: "#6B7A8D" }}>Selecione uma das opções abaixo para continuar.</p>
+
+          <div className="grid sm:grid-cols-2 gap-5">
+            {acoes.map(({ label, descricao, icone: Icone, onClick }) => (
+              <button key={label} onClick={onClick}
+                className="text-left bg-white rounded-2xl p-6 hover:shadow-xl hover:-translate-y-1 transition-all group"
+                style={{ border: "1.5px solid #BBDEFB", boxShadow: "0 2px 16px rgba(12,40,86,0.07)" }}>
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4" style={{ backgroundColor: "#E3F2FD" }}>
+                  <Icone size={24} style={{ color: "#0C2856" }} />
+                </div>
+                <div className="w-6 h-0.5 rounded-full mb-3" style={{ backgroundColor: "#0C2856" }} />
+                <p className="font-display text-lg font-bold mb-2" style={{ color: "#0C2856" }}>{label}</p>
+                <p className="font-ui text-sm leading-relaxed" style={{ color: "#4A5568" }}>{descricao}</p>
+                <div className="mt-4 flex items-center gap-2" style={{ color: "#0068FF" }}>
+                  <span className="font-mono-label text-[11px] uppercase tracking-wide">Acessar</span>
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                    <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+function TelaHome({ onIrPara, onVoltarProduto }) {
+  return (
+    <HomeTela
+      titulo="Alimentação Hospitalar"
+      subtitulo="Alimentação hospitalar"
+      onVoltar={onVoltarProduto}
+      acoes={[
+        { label: "Realizar monitoramento", descricao: "Aplicar o checklist mensal e inserir dados de consumo de alimentação por hospital.", icone: ClipboardList, onClick: () => onIrPara("monitoramento") },
+        { label: "Visualizar painel", descricao: "Série histórica de biometria, ICA, indicadores de proporção e economia por hospital.", icone: BarChart3, onClick: () => onIrPara("painel") },
+      ]}
+    />
+  );
+}
+
 
 function LogosCabecalho({ alturaPE = 26, alturaSCI = 40 }) {
   return (
@@ -936,7 +1120,8 @@ function FontesGlobais() {
       .font-mono-label { font-family: 'JetBrains Mono', monospace; }
       .font-ui { font-family: 'Inter', sans-serif; }
       .font-display { font-family: 'Fraunces', serif; font-optical-sizing: auto; }
-      ::selection { background: #8B7355; color: #FAF7EF; }
+      body { font-size: 15px; }
+      ::selection { background: #0068FF; color: #fff; }
     `}</style>
   );
 }
@@ -944,29 +1129,33 @@ function FontesGlobais() {
 function BarraTopo({ titulo, onVoltar, produto = "Alimentação Hospitalar" }) {
   return (
     <>
-      <header className="border-b border-[#1C3A5A]/20 bg-[#1C3A5A] text-white">
+      <header style={{ backgroundColor: "#0C2856" }}>
         <div className="max-w-5xl mx-auto px-6 py-3 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
-            <button onClick={onVoltar} className="text-[#EDE7D9]/70 hover:text-[#EDE7D9] transition-colors flex-shrink-0" aria-label="Voltar">
+            <button onClick={onVoltar} className="text-white/70 hover:text-white transition-colors flex-shrink-0" aria-label="Voltar">
               <ArrowLeft size={18} />
             </button>
-            <img src={LOGO_PE_BASE64} alt="Governo de Pernambuco" style={{ height: 20 }} className="flex-shrink-0" />
+            <img src={LOGO_PE_BASE64} alt="Governo de Pernambuco" style={{ height: 22 }} className="flex-shrink-0" />
+            <div className="w-px h-6" style={{ backgroundColor: "rgba(255,255,255,0.2)" }} />
             <div className="min-w-0">
-              <p className="font-ui text-sm font-medium leading-tight truncate">{titulo}</p>
-              <p className="font-mono-label text-[11px] text-[#EDE7D9]/60 tracking-wide uppercase truncate">{produto}</p>
+              <p className="font-ui text-sm font-semibold text-white leading-tight truncate">{titulo}</p>
+              <p className="font-mono-label text-[10px] uppercase tracking-wide truncate" style={{ color: "rgba(255,255,255,0.55)" }}>{produto} · UCI-SES-PE</p>
             </div>
           </div>
           <img src={LOGO_SCI_BASE64} alt="SCI — Sistema de Controle Interno" style={{ height: 32 }} className="flex-shrink-0" />
         </div>
+        {/* Barra colorida Gov-PE */}
+        <div className="flex h-1">
+          {["#0068FF","#3AE8C6","#4AE23D","#FFCE00","#FF6700","#ED282C"].map(c => (
+            <div key={c} className="flex-1" style={{ backgroundColor: c }} />
+          ))}
+        </div>
       </header>
 
-      {/* Botão flutuante fixo — sempre visível ao rolar a página */}
-      <button
-        onClick={onVoltar}
-        aria-label="Voltar"
+      {/* Botão flutuante */}
+      <button onClick={onVoltar} aria-label="Voltar"
         className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 shadow-lg transition-all hover:opacity-90 active:scale-95"
-        style={{ backgroundColor: "#1C3A5A", color: "white", border: "2px solid #8B7355", borderRadius: "12px" }}
-      >
+        style={{ backgroundColor: "#0C2856", color: "white", border: "2px solid #0068FF", borderRadius: "12px" }}>
         <ArrowLeft size={16} />
         <span className="font-mono-label text-[11px] uppercase tracking-wide">Voltar</span>
       </button>
@@ -974,31 +1163,66 @@ function BarraTopo({ titulo, onVoltar, produto = "Alimentação Hospitalar" }) {
   );
 }
 
+// Wrapper de layout para todas as telas internas — fundo, blob e ondas consistentes
+function TelaLayout({ children }) {
+  return (
+    <div className="min-h-screen flex flex-col relative overflow-x-hidden"
+      style={{ backgroundColor: "#F8FAFD", fontFamily: "'Fraunces', Georgia, serif" }}>
+      <FontesGlobais />
+      {/* Blob decorativo canto superior esquerdo */}
+      <div className="fixed top-0 left-0 pointer-events-none" style={{ zIndex: 0, width: 160, height: 200, opacity: 0.55 }}>
+        <svg viewBox="0 0 160 200" fill="none" style={{ width: "100%", height: "100%" }}>
+          <path d="M0 0 C40 0 80 20 85 65 C95 120 55 170 18 188 C6 194 0 200 0 200 Z" fill="url(#tlbg)"/>
+          <defs>
+            <linearGradient id="tlbg" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor="#0068FF"/>
+              <stop offset="55%" stopColor="#3AE8C6"/>
+              <stop offset="100%" stopColor="#4AE23D"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+      {/* Ondas rodapé */}
+      <div className="fixed bottom-0 left-0 right-0 pointer-events-none" style={{ zIndex: 0, height: 48 }}>
+        <svg viewBox="0 0 1200 48" fill="none" style={{ width: "100%", height: "100%" }} preserveAspectRatio="none">
+          <path d="M0 24 Q300 6 600 24 T1200 24" stroke="#0068FF" strokeWidth="1.5" fill="none" opacity="0.25"/>
+          <path d="M0 33 Q300 15 600 33 T1200 33" stroke="#4AE23D" strokeWidth="1.5" fill="none" opacity="0.25"/>
+          <path d="M0 42 Q300 24 600 42 T1200 42" stroke="#FFCE00" strokeWidth="1" fill="none" opacity="0.25"/>
+        </svg>
+      </div>
+      {/* Conteúdo */}
+      <div className="relative flex flex-col flex-1" style={{ zIndex: 1 }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+
 // ---------- Tela: Monitoramento (formulário) ----------
 function TelaMonitoramento({ onVoltar }) {
   const [aba, setAba] = useState(null); // null | "checklist" | "consumo"
 
   if (aba === null) {
     return (
-      <div className="min-h-screen bg-[#F4F7FA] text-[#1C1A17]" style={{ fontFamily: "'Fraunces', Georgia, serif" }}>
-        <FontesGlobais />
-        <BarraTopo titulo="Realizar monitoramento" onVoltar={onVoltar} />
+      <TelaLayout>
+      <BarraTopo titulo="Realizar monitoramento" onVoltar={onVoltar} />
 
         <main className="max-w-3xl mx-auto px-6 py-10">
           <p className="font-mono-label text-[11px] uppercase tracking-[0.18em] text-[#6B7A8D] mb-2">O que você deseja fazer?</p>
-          <h1 className="font-display text-3xl font-bold mb-8" style={{ color: "#1C3A5A" }}>Selecione uma ação</h1>
+          <h1 className="font-display text-3xl font-bold mb-8" style={{ color: "#0C2856" }}>Selecione uma ação</h1>
 
           <div className="flex flex-col gap-5">
             <button
               onClick={() => setAba("checklist")}
               className="text-left bg-white rounded-2xl p-6 hover:shadow-xl hover:-translate-y-0.5 transition-all group"
-              style={{ border: "1.5px solid #C8E6C9", boxShadow: "0 2px 12px rgba(31,90,74,0.07)" }}
+              style={{ border: "1.5px solid #BBDEFB", boxShadow: "0 2px 16px rgba(12,40,86,0.07)" }}
             >
-              <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4" style={{ backgroundColor: "#E8F5E9" }}>
-                <ClipboardList size={24} style={{ color: "#1F5A4A" }} />
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4" style={{ backgroundColor: "#E3F2FD" }}>
+                <ClipboardList size={24} style={{ color: "#0C2856" }} />
               </div>
-              <div className="w-6 h-0.5 rounded-full mb-3" style={{ backgroundColor: "#1F5A4A" }} />
-              <p className="font-display text-lg font-bold mb-2" style={{ color: "#1F5A4A" }}>Aplicar checklist</p>
+              <div className="w-6 h-0.5 rounded-full mb-3" style={{ backgroundColor: "#0C2856" }} />
+              <p className="font-display text-lg font-bold mb-2" style={{ color: "#0C2856" }}>Aplicar checklist</p>
               <p className="font-ui text-sm leading-relaxed" style={{ color: "#4A5568" }}>
                 Verificar, artigo por artigo, os pontos de controle do mês para o hospital selecionado.
               </p>
@@ -1007,26 +1231,25 @@ function TelaMonitoramento({ onVoltar }) {
             <button
               onClick={() => setAba("consumo")}
               className="text-left bg-white rounded-2xl p-6 hover:shadow-xl hover:-translate-y-0.5 transition-all group"
-              style={{ border: "1.5px solid #BBDEFB", boxShadow: "0 2px 12px rgba(61,90,115,0.07)" }}
+              style={{ border: "1.5px solid #BBDEFB", boxShadow: "0 2px 16px rgba(12,40,86,0.07)" }}
             >
               <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4" style={{ backgroundColor: "#E3F2FD" }}>
-                <FileText size={24} style={{ color: "#3D5A73" }} />
+                <FileText size={24} style={{ color: "#0C2856" }} />
               </div>
-              <div className="w-6 h-0.5 rounded-full mb-3" style={{ backgroundColor: "#3D5A73" }} />
-              <p className="font-display text-lg font-bold mb-2" style={{ color: "#3D5A73" }}>Inserir dados de consumo</p>
+              <div className="w-6 h-0.5 rounded-full mb-3" style={{ backgroundColor: "#0C2856" }} />
+              <p className="font-display text-lg font-bold mb-2" style={{ color: "#0C2856" }}>Inserir dados de consumo</p>
               <p className="font-ui text-sm leading-relaxed" style={{ color: "#4A5568" }}>
                 Registrar as refeições servidas no mês e consultar a referência e o custo unitário travados.
               </p>
             </button>
           </div>
         </main>
-      </div>
+      </TelaLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#F4F7FA] text-[#1C1A17]" style={{ fontFamily: "'Fraunces', Georgia, serif" }}>
-      <FontesGlobais />
+    <TelaLayout>
       <BarraTopo titulo="Realizar monitoramento" onVoltar={() => setAba(null)} />
 
       <div className="max-w-6xl mx-auto px-6 pt-6">
@@ -1036,7 +1259,7 @@ function TelaMonitoramento({ onVoltar }) {
       </div>
 
       {aba === "checklist" ? <AbaChecklist /> : <AbaInserirConsumo />}
-    </div>
+    </TelaLayout>
   );
 }
 
@@ -1131,6 +1354,40 @@ function AbaChecklist() {
     setOpenObs((prev) => ({ ...prev, [art]: !prev[art] }));
   }
 
+  // Links de anexo (Drive) para itens com comLink
+  const [linksAnexo, setLinksAnexo] = useState({});
+  function setLink(art, url) {
+    setLinksAnexo((prev) => ({ ...prev, [art]: url }));
+  }
+
+  // Conforme automático: atualiza status dos itens métricos conforme os valores inseridos
+  useEffect(() => {
+    if (percentualNum !== null && !Number.isNaN(percentualNum)) {
+      setRespostas((prev) => ({
+        ...prev,
+        "Art. 8º": percentualNum >= META_BIOMETRIA ? STATUS.CONFORME : STATUS.NAO_CONFORME,
+      }));
+    }
+  }, [percentualNum]);
+
+  useEffect(() => {
+    if (razaoLanche !== null) {
+      setRespostas((prev) => ({
+        ...prev,
+        "Indicador": razaoLanche <= 1.0 ? STATUS.CONFORME : STATUS.NAO_CONFORME,
+      }));
+    }
+  }, [razaoLanche]);
+
+  useEffect(() => {
+    if (razaoAcomp !== null) {
+      setRespostas((prev) => ({
+        ...prev,
+        "Indicador 2": razaoAcomp <= 3.0 ? STATUS.CONFORME : STATUS.NAO_CONFORME,
+      }));
+    }
+  }, [razaoAcomp]);
+
   const percentualPreenchido = percentualBiometria !== "" && !Number.isNaN(percentualNum);
   const podeEnviar =
     progresso.respondidos === progresso.total &&
@@ -1199,13 +1456,16 @@ function AbaChecklist() {
               <label className="font-mono-label text-[11px] uppercase tracking-wider text-[#6B6357] block mb-2">
                 Responsável pela UCI
               </label>
-              <input
-                type="text"
+              <select
                 value={responsavel}
                 onChange={(e) => setResponsavel(e.target.value)}
-                placeholder="Nome do servidor responsável"
-                className="w-full bg-transparent border-b-2 border-[#E2E8F0] py-2 font-ui text-base placeholder:text-[#6B6357]/50 focus:outline-none focus:border-[#3D5A73]"
-              />
+                className="w-full bg-transparent border-b-2 border-[#E2E8F0] py-2 font-ui text-base focus:outline-none focus:border-[#3D5A73]"
+              >
+                <option value="">— Selecione o servidor —</option>
+                {SERVIDORES_UCI.map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
             </div>
           </div>
         </section>
@@ -1230,13 +1490,13 @@ function AbaChecklist() {
                 className={`border border-[#1C1A17] -mt-px bg-[#FAF7EF] ${destacarCritico ? "border-l-[6px] border-l-[#A13D2B]" : ""}`}
               >
                 <div className="p-6 grid grid-cols-1 md:grid-cols-[3rem_1fr_auto] gap-4 items-start">
-                  <div className="font-mono-label text-2xl text-[#8B7355] leading-none pt-1">{romanize(idx)}</div>
+                  <div className="font-mono-label text-2xl text-[#FF6700] leading-none pt-1">{romanize(idx)}</div>
 
                   <div>
                     <div className="flex items-baseline gap-2 flex-wrap mb-1">
                       <h3 className="font-ui font-semibold text-base">{item.titulo}</h3>
                       {item.sensivel && (
-                        <span className="font-mono-label text-[10px] uppercase tracking-wider text-[#A13D2B] border border-[#A13D2B] px-1.5 py-0.5">
+                        <span className="font-mono-label text-[10px] uppercase tracking-wider text-[#ED282C] border border-[#ED282C] px-1.5 py-0.5">
                           Ponto crítico
                         </span>
                       )}
@@ -1259,6 +1519,36 @@ function AbaChecklist() {
                     <p className="font-ui text-sm text-[#2B2723] leading-relaxed mt-2 max-w-2xl">{item.texto}</p>
 
                     {item.metrico && (
+                      <div className="mt-3 p-3 rounded-lg text-xs font-mono-label space-y-1" style={{ backgroundColor: "#F0F4FF", border: "1px solid #BBDEFB" }}>
+                        <p className="font-semibold text-[#0C2856] mb-1.5">Legenda — taxa de biometria</p>
+                        <p><span className="inline-block w-2.5 h-2.5 rounded-full mr-1.5" style={{ backgroundColor: "#0068FF" }} />≥ 90% — Conforme, sem exigência adicional</p>
+                        <p><span className="inline-block w-2.5 h-2.5 rounded-full mr-1.5" style={{ backgroundColor: "#FF6700" }} />70% a 89,99% — Não conforme, justificativa recomendável</p>
+                        <p><span className="inline-block w-2.5 h-2.5 rounded-full mr-1.5" style={{ backgroundColor: "#ED282C" }} />{"< 70%"} — Crítico, justificativa e ações pactuadas obrigatórias</p>
+                      </div>
+                    )}
+
+                    {item.comLink && (
+                      <div className="mt-4 max-w-2xl">
+                        <label className="font-mono-label text-[11px] uppercase tracking-wider text-[#6B6357] block mb-1.5">
+                          Link do anexo no Google Drive
+                        </label>
+                        <input
+                          type="url"
+                          value={linksAnexo[item.art] || ""}
+                          onChange={(e) => setLink(item.art, e.target.value)}
+                          placeholder="https://drive.google.com/..."
+                          className="w-full bg-white border border-[#CBD5E1] focus:border-[#3D5A73] py-2 px-3 font-ui text-sm focus:outline-none rounded"
+                        />
+                        {linksAnexo[item.art] && (
+                          <a href={linksAnexo[item.art]} target="_blank" rel="noreferrer"
+                            className="font-mono-label text-[10px] text-[#3D5A73] underline mt-1 inline-block">
+                            Abrir link →
+                          </a>
+                        )}
+                      </div>
+                    )}
+
+                    {item.metrico && (
                       <div className="mt-4 max-w-2xl">
                         <div className="flex items-end gap-4 flex-wrap">
                           <div>
@@ -1275,7 +1565,7 @@ function AbaChecklist() {
                                 onChange={(e) => setPercentualBiometria(e.target.value)}
                                 placeholder="0,0"
                                 className={`w-28 bg-[#F4F7FA] border-2 py-2 px-3 font-ui text-lg font-semibold focus:outline-none
-                                  ${criticoBiometria ? "border-[#A13D2B] text-[#A13D2B] ring-2 ring-[#A13D2B]/30" : abaixoDaMeta ? "border-[#A13D2B] text-[#A13D2B]" : "border-[#1C1A17] text-[#1C1A17] focus:border-[#3D5A73]"}`}
+                                  ${criticoBiometria ? "border-[#ED282C] text-[#ED282C] ring-2 ring-[#A13D2B]/30" : abaixoDaMeta ? "border-[#ED282C] text-[#ED282C]" : "border-[#1C1A17] text-[#1C1A17] focus:border-[#3D5A73]"}`}
                               />
                               <span className="font-ui text-lg text-[#6B6357]">%</span>
                             </div>
@@ -1285,16 +1575,16 @@ function AbaChecklist() {
                           </div>
                           {percentualBadge(percentualNum, META_BIOMETRIA)}
                           {criticoBiometria && (
-                            <span className="font-mono-label text-[11px] uppercase tracking-wider px-2 py-1 border-2 pb-2.5 mb-0 border-[#A13D2B] text-[#A13D2B] bg-[#A13D2B]/10 flex items-center gap-1">
+                            <span className="font-mono-label text-[11px] uppercase tracking-wider px-2 py-1 border-2 pb-2.5 mb-0 border-[#ED282C] text-[#ED282C] bg-[#ED282C]/10 flex items-center gap-1">
                               <AlertTriangle size={12} /> Crítico
                             </span>
                           )}
                         </div>
 
                         {criticoBiometria && (
-                          <div className="mt-4 border-2 border-[#A13D2B] bg-[#A13D2B]/10 p-3 flex items-start gap-2">
-                            <AlertTriangle size={16} className="text-[#A13D2B] flex-shrink-0 mt-0.5" />
-                            <p className="font-ui text-sm text-[#A13D2B] font-medium">
+                          <div className="mt-4 border-2 border-[#ED282C] bg-[#ED282C]/10 p-3 flex items-start gap-2">
+                            <AlertTriangle size={16} className="text-[#ED282C] flex-shrink-0 mt-0.5" />
+                            <p className="font-ui text-sm text-[#ED282C] font-medium">
                               Percentual abaixo de {LIMITE_CRITICO_BIOMETRIA}% — situação crítica. Justificativa e plano de
                               ação detalhados são indispensáveis e devem refletir providências imediatas.
                             </p>
@@ -1302,43 +1592,43 @@ function AbaChecklist() {
                         )}
 
                         {abaixoDaMeta && (
-                          <div className={`mt-4 border-2 p-4 space-y-3 ${criticoBiometria ? "border-[#A13D2B] bg-[#A13D2B]/5" : "border-[#1C1A17]/30 bg-[#F4F7FA]"}`}>
-                            <p className={`font-mono-label text-[11px] uppercase tracking-wider font-semibold ${criticoBiometria ? "text-[#A13D2B]" : "text-[#6B6357]"}`}>
+                          <div className={`mt-4 border-2 p-4 space-y-3 ${criticoBiometria ? "border-[#ED282C] bg-[#ED282C]/5" : "border-[#1C1A17]/30 bg-[#F4F7FA]"}`}>
+                            <p className={`font-mono-label text-[11px] uppercase tracking-wider font-semibold ${criticoBiometria ? "text-[#ED282C]" : "text-[#6B6357]"}`}>
                               {criticoBiometria
                                 ? "Percentual abaixo de 70% — justificativa obrigatória"
                                 : `Percentual abaixo da meta de ${META_BIOMETRIA}% — recomenda-se registrar a justificativa`}
                             </p>
                             <div>
                               <label className="font-ui text-xs text-[#6B6357] block mb-1">
-                                Motivo do não atingimento {criticoBiometria && <span className="text-[#A13D2B]">*</span>}
+                                Motivo do não atingimento {criticoBiometria && <span className="text-[#ED282C]">*</span>}
                               </label>
                               <textarea
                                 value={motivoNaoAtingimento}
                                 onChange={(e) => setMotivoNaoAtingimento(e.target.value)}
                                 placeholder="Ex.: catraca apresentou falhas recorrentes na ala B durante 12 dias..."
                                 rows={2}
-                                className={`w-full bg-[#FAF7EF] border p-3 font-ui text-sm placeholder:text-[#6B6357]/50 focus:outline-none resize-none ${criticoBiometria ? "border-[#A13D2B]/40 focus:border-[#A13D2B]" : "border-[#1C1A17]/30 focus:border-[#3D5A73]"}`}
+                                className={`w-full bg-[#FAF7EF] border p-3 font-ui text-sm placeholder:text-[#6B6357]/50 focus:outline-none resize-none ${criticoBiometria ? "border-[#ED282C]/40 focus:border-[#ED282C]" : "border-[#1C1A17]/30 focus:border-[#3D5A73]"}`}
                               />
                             </div>
                             <div>
                               <label className="font-ui text-xs text-[#6B6357] block mb-1.5">
-                                Ações pactuadas com o gestor {criticoBiometria && <span className="text-[#A13D2B]">*</span>}
+                                Ações pactuadas com o gestor {criticoBiometria && <span className="text-[#ED282C]">*</span>}
                               </label>
                               <div className="space-y-2">
                                 {acoesPactuadas.map((acao, idx) => (
                                   <div key={idx} className="flex items-start gap-2">
-                                    <span className={`font-mono-label text-xs pt-2.5 ${criticoBiometria ? "text-[#A13D2B]" : "text-[#6B6357]"}`}>{idx + 1}.</span>
+                                    <span className={`font-mono-label text-xs pt-2.5 ${criticoBiometria ? "text-[#ED282C]" : "text-[#6B6357]"}`}>{idx + 1}.</span>
                                     <textarea
                                       value={acao}
                                       onChange={(e) => atualizarAcao(idx, e.target.value)}
                                       placeholder="Ex.: manutenção da catraca agendada para o dia X..."
                                       rows={1}
-                                      className={`flex-1 bg-[#FAF7EF] border p-2 font-ui text-sm placeholder:text-[#6B6357]/50 focus:outline-none resize-none ${criticoBiometria ? "border-[#A13D2B]/40 focus:border-[#A13D2B]" : "border-[#1C1A17]/30 focus:border-[#3D5A73]"}`}
+                                      className={`flex-1 bg-[#FAF7EF] border p-2 font-ui text-sm placeholder:text-[#6B6357]/50 focus:outline-none resize-none ${criticoBiometria ? "border-[#ED282C]/40 focus:border-[#ED282C]" : "border-[#1C1A17]/30 focus:border-[#3D5A73]"}`}
                                     />
                                     {acoesPactuadas.length > 1 && (
                                       <button
                                         onClick={() => removerAcao(idx)}
-                                        className={`pt-2 ${criticoBiometria ? "text-[#A13D2B]/60 hover:text-[#A13D2B]" : "text-[#6B6357]/60 hover:text-[#1C1A17]"}`}
+                                        className={`pt-2 ${criticoBiometria ? "text-[#ED282C]/60 hover:text-[#ED282C]" : "text-[#6B6357]/60 hover:text-[#1C1A17]"}`}
                                         aria-label="Remover ação"
                                       >
                                         <X size={14} />
@@ -1349,7 +1639,7 @@ function AbaChecklist() {
                               </div>
                               <button
                                 onClick={adicionarAcao}
-                                className={`font-mono-label text-[11px] uppercase tracking-wide underline decoration-dotted hover:text-[#1C1A17] mt-2 ${criticoBiometria ? "text-[#A13D2B]" : "text-[#6B6357]"}`}
+                                className={`font-mono-label text-[11px] uppercase tracking-wide underline decoration-dotted hover:text-[#1C1A17] mt-2 ${criticoBiometria ? "text-[#ED282C]" : "text-[#6B6357]"}`}
                               >
                                 + adicionar ação
                               </button>
@@ -1374,7 +1664,7 @@ function AbaChecklist() {
                               onChange={(e) => setMediaLanches(e.target.value)}
                               placeholder="0"
                               className={`w-28 bg-[#F4F7FA] border-2 py-2 px-3 font-ui text-lg font-semibold focus:outline-none
-                                ${lancheNaoConforme ? "border-[#A13D2B] text-[#A13D2B]" : "border-[#1C1A17] text-[#1C1A17] focus:border-[#3D5A73]"}`}
+                                ${lancheNaoConforme ? "border-[#ED282C] text-[#ED282C]" : "border-[#1C1A17] text-[#1C1A17] focus:border-[#3D5A73]"}`}
                             />
                           </div>
                           <div>
@@ -1394,7 +1684,7 @@ function AbaChecklist() {
                           {razaoLanche !== null && (
                             <div className="pb-2.5 flex flex-col gap-1">
                               <span className="font-mono-label text-[11px] text-[#6B6357] uppercase tracking-wider">Razão apurada</span>
-                              <span className={`font-mono-label text-xl font-semibold ${lancheNaoConforme ? "text-[#A13D2B]" : "text-[#1F5A4A]"}`}>
+                              <span className={`font-mono-label text-xl font-semibold ${lancheNaoConforme ? "text-[#ED282C]" : "text-[#1F5A4A]"}`}>
                                 {razaoLanche.toFixed(2)}
                               </span>
                             </div>
@@ -1407,12 +1697,12 @@ function AbaChecklist() {
                                 </span>
                               )}
                               {lancheNaoConforme && !lancheCritico && (
-                                <span className="font-mono-label text-[11px] uppercase tracking-wider px-2 py-1 border-2 border-[#A13D2B] text-[#A13D2B] flex items-center gap-1">
+                                <span className="font-mono-label text-[11px] uppercase tracking-wider px-2 py-1 border-2 border-[#ED282C] text-[#ED282C] flex items-center gap-1">
                                   <X size={12} /> Não conforme
                                 </span>
                               )}
                               {lancheCritico && (
-                                <span className="font-mono-label text-[11px] uppercase tracking-wider px-2 py-1 border-2 border-[#A13D2B] text-[#A13D2B] bg-[#A13D2B]/10 flex items-center gap-1">
+                                <span className="font-mono-label text-[11px] uppercase tracking-wider px-2 py-1 border-2 border-[#ED282C] text-[#ED282C] bg-[#ED282C]/10 flex items-center gap-1">
                                   <AlertTriangle size={12} /> Não conforme — justificativa obrigatória
                                 </span>
                               )}
@@ -1421,16 +1711,16 @@ function AbaChecklist() {
                         </div>
 
                         {lancheCritico && (
-                          <div className="mt-4 border-2 border-[#A13D2B] bg-[#A13D2B]/5 p-4">
-                            <p className="font-mono-label text-[11px] uppercase tracking-wider font-semibold text-[#A13D2B] mb-3">
-                              Razão acima de 1,1 — justificativa obrigatória <span className="text-[#A13D2B]">*</span>
+                          <div className="mt-4 border-2 border-[#ED282C] bg-[#ED282C]/5 p-4">
+                            <p className="font-mono-label text-[11px] uppercase tracking-wider font-semibold text-[#ED282C] mb-3">
+                              Razão acima de 1,1 — justificativa obrigatória <span className="text-[#ED282C]">*</span>
                             </p>
                             <textarea
                               value={justificativaLanche}
                               onChange={(e) => setJustificativaLanche(e.target.value)}
                               placeholder="Ex.: em função do Dia do Profissional de Saúde, foram servidos lanches adicionais mediante autorização da direção. Relação nominal dos beneficiados disponível em arquivo X..."
                               rows={3}
-                              className="w-full bg-[#FAF7EF] border border-[#A13D2B]/40 focus:border-[#A13D2B] p-3 font-ui text-sm placeholder:text-[#6B6357]/50 focus:outline-none resize-none"
+                              className="w-full bg-[#FAF7EF] border border-[#ED282C]/40 focus:border-[#ED282C] p-3 font-ui text-sm placeholder:text-[#6B6357]/50 focus:outline-none resize-none"
                             />
                           </div>
                         )}
@@ -1460,7 +1750,7 @@ function AbaChecklist() {
                               onChange={(e) => setMediaRefeicoesAcomp(e.target.value)}
                               placeholder="0"
                               className={`w-28 bg-[#F4F7FA] border-2 py-2 px-3 font-ui text-lg font-semibold focus:outline-none
-                                ${acompNaoConforme ? "border-[#A13D2B] text-[#A13D2B]" : "border-[#1C1A17] text-[#1C1A17] focus:border-[#3D5A73]"}`}
+                                ${acompNaoConforme ? "border-[#ED282C] text-[#ED282C]" : "border-[#1C1A17] text-[#1C1A17] focus:border-[#3D5A73]"}`}
                             />
                           </div>
                           <div>
@@ -1480,7 +1770,7 @@ function AbaChecklist() {
                           {razaoAcomp !== null && (
                             <div className="pb-2.5 flex flex-col gap-1">
                               <span className="font-mono-label text-[11px] text-[#6B6357] uppercase tracking-wider">Razão apurada</span>
-                              <span className={`font-mono-label text-xl font-semibold ${acompNaoConforme ? "text-[#A13D2B]" : "text-[#1F5A4A]"}`}>
+                              <span className={`font-mono-label text-xl font-semibold ${acompNaoConforme ? "text-[#ED282C]" : "text-[#1F5A4A]"}`}>
                                 {razaoAcomp.toFixed(2)}
                               </span>
                             </div>
@@ -1493,12 +1783,12 @@ function AbaChecklist() {
                                 </span>
                               )}
                               {acompNaoConforme && !acompCritico && (
-                                <span className="font-mono-label text-[11px] uppercase tracking-wider px-2 py-1 border-2 border-[#A13D2B] text-[#A13D2B] flex items-center gap-1">
+                                <span className="font-mono-label text-[11px] uppercase tracking-wider px-2 py-1 border-2 border-[#ED282C] text-[#ED282C] flex items-center gap-1">
                                   <X size={12} /> Não conforme
                                 </span>
                               )}
                               {acompCritico && (
-                                <span className="font-mono-label text-[11px] uppercase tracking-wider px-2 py-1 border-2 border-[#A13D2B] text-[#A13D2B] bg-[#A13D2B]/10 flex items-center gap-1">
+                                <span className="font-mono-label text-[11px] uppercase tracking-wider px-2 py-1 border-2 border-[#ED282C] text-[#ED282C] bg-[#ED282C]/10 flex items-center gap-1">
                                   <AlertTriangle size={12} /> Não conforme — justificativa obrigatória
                                 </span>
                               )}
@@ -1513,16 +1803,16 @@ function AbaChecklist() {
                         )}
 
                         {acompCritico && (
-                          <div className="mt-4 border-2 border-[#A13D2B] bg-[#A13D2B]/5 p-4">
-                            <p className="font-mono-label text-[11px] uppercase tracking-wider font-semibold text-[#A13D2B] mb-3">
-                              Razão acima de 3,3 — justificativa obrigatória <span className="text-[#A13D2B]">*</span>
+                          <div className="mt-4 border-2 border-[#ED282C] bg-[#ED282C]/5 p-4">
+                            <p className="font-mono-label text-[11px] uppercase tracking-wider font-semibold text-[#ED282C] mb-3">
+                              Razão acima de 3,3 — justificativa obrigatória <span className="text-[#ED282C]">*</span>
                             </p>
                             <textarea
                               value={justificativaAcomp}
                               onChange={(e) => setJustificativaAcomp(e.target.value)}
                               placeholder="Ex.: evento institucional no dia X gerou aumento temporário de acompanhantes autorizados pela direção. Relação nominal disponível em arquivo Y..."
                               rows={3}
-                              className="w-full bg-[#FAF7EF] border border-[#A13D2B]/40 focus:border-[#A13D2B] p-3 font-ui text-sm placeholder:text-[#6B6357]/50 focus:outline-none resize-none"
+                              className="w-full bg-[#FAF7EF] border border-[#ED282C]/40 focus:border-[#ED282C] p-3 font-ui text-sm placeholder:text-[#6B6357]/50 focus:outline-none resize-none"
                             />
                           </div>
                         )}
@@ -1580,7 +1870,7 @@ function AbaChecklist() {
           })}
         </section>
 
-        <section className="mt-8 border-2 border-[#1C1A17] bg-[#1C3A5A] text-white p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+        <section className="mt-8 border-2 border-[#1C1A17] bg-[#0C2856] text-white p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
           <div className="flex gap-6 font-mono-label text-xs">
             <div>
               <p className="text-[#EDE7D9]/50 uppercase tracking-wider mb-1">Conforme</p>
@@ -1606,7 +1896,7 @@ function AbaChecklist() {
               disabled={!podeEnviar}
               onClick={() => setShowSummary(true)}
               className={`font-ui text-sm font-medium px-6 py-3 border-2 transition-colors
-                ${podeEnviar ? "bg-[#8B7355] border-[#8B7355] text-[#1C1A17] hover:bg-[#A68968]" : "border-[#EDE7D9]/20 text-[#EDE7D9]/30 cursor-not-allowed"}`}
+                ${podeEnviar ? "bg-[#FF6700] border-[#FF6700] text-[#1C1A17] hover:bg-[#A68968]" : "border-[#EDE7D9]/20 text-[#EDE7D9]/30 cursor-not-allowed"}`}
             >
               Concluir verificação mensal
             </button>
@@ -1638,12 +1928,12 @@ function AbaChecklist() {
                   const Icon = cfg?.icon;
                   return (
                     <div key={item.art} className="flex items-start gap-3 border-b border-[#E2E8F0] pb-3">
-                      <span className="font-mono-label text-sm text-[#8B7355] w-6">{romanize(idx)}</span>
+                      <span className="font-mono-label text-sm text-[#FF6700] w-6">{romanize(idx)}</span>
                       <div className="flex-1">
                         <p className="font-ui text-sm font-medium">{item.titulo}</p>
                         {item.metrico && (
                           <p className="font-mono-label text-xs mt-1">
-                            Apurado: <span className={abaixoDaMeta ? "text-[#A13D2B] font-semibold" : "text-[#1F5A4A] font-semibold"}>{percentualBiometria}%</span>
+                            Apurado: <span className={abaixoDaMeta ? "text-[#ED282C] font-semibold" : "text-[#1F5A4A] font-semibold"}>{percentualBiometria}%</span>
                             <span className="text-[#6B6357]"> (meta: {META_BIOMETRIA}%)</span>
                           </p>
                         )}
@@ -1673,7 +1963,7 @@ function AbaChecklist() {
               </div>
             </div>
             {confirmado ? (
-              <div className="border-t border-[#E2E8F0] px-6 py-5 flex items-center gap-4" style={{ backgroundColor: "#1F5A4A" }}>
+              <div className="border-t border-[#E2E8F0] px-6 py-5 flex items-center gap-4" style={{ backgroundColor: "#0068FF" }}>
                 <CarimboCGE size={40} className="text-[#FAF7EF] flex-shrink-0" />
                 <div>
                   <p className="font-ui text-sm font-semibold text-[#FAF7EF]">Verificação mensal concluída</p>
@@ -1693,7 +1983,7 @@ function AbaChecklist() {
                 <button
                   onClick={() => setConfirmado(true)}
                   className="font-ui text-sm font-medium px-6 py-2.5 border-2"
-                  style={{ backgroundColor: "#8B7355", borderColor: "#8B7355", color: "#1C1A17" }}
+                  style={{ backgroundColor: "#FF6700", borderColor: "#FF6700", color: "#1C1A17" }}
                 >
                   Confirmar e concluir
                 </button>
@@ -1721,9 +2011,7 @@ function MatrizUltimoMes() {
             Matriz de pontos de controle — todos os hospitais
           </h2>
         </div>
-        <p className="font-mono-label text-[11px] text-[#6B6357]">
-          Referente a <span className="text-[#1C1A17] font-semibold">{labelMes}</span>, último mês com preenchimento
-        </p>
+        <p className="font-mono-label text-[11px] text-[#6B6357]">Conforme · Não conforme · N/A</p>
       </div>
 
       <div className="overflow-x-auto p-6 pt-4">
@@ -1748,7 +2036,7 @@ function MatrizUltimoMes() {
               <tr key={item.art} className="border-b border-[#E2E8F0]">
                 <td className="px-3 py-2.5 sticky left-0 bg-[#FAF7EF]">
                   <div className="flex items-center gap-2">
-                    <span className="font-mono-label text-[#8B7355] text-sm">{romanize(idx)}</span>
+                    <span className="font-mono-label text-[#FF6700] text-sm">{romanize(idx)}</span>
                     <span className="text-xs font-medium">{item.titulo}</span>
                   </div>
                 </td>
@@ -1760,7 +2048,7 @@ function MatrizUltimoMes() {
                   if (item.metrico) {
                     return (
                       <td key={h.sigla} className="text-center px-3 py-2.5">
-                        <span className={`font-mono-label text-xs font-semibold ${mesHospital.abaixoDaMeta ? "text-[#A13D2B]" : "text-[#1F5A4A]"}`}>
+                        <span className={`font-mono-label text-xs font-semibold ${mesHospital.abaixoDaMeta ? "text-[#ED282C]" : "text-[#1F5A4A]"}`}>
                           {mesHospital.percentual}%
                         </span>
                       </td>
@@ -1770,8 +2058,10 @@ function MatrizUltimoMes() {
                   const cfg = statusConfig(s);
                   const Icon = cfg.icon;
                   return (
-                    <td key={h.sigla} className="text-center px-3 py-2.5">
-                      <Icon size={15} className="inline-block" style={{ color: cfg.hex }} />
+                    <td key={h.sigla} className="text-center px-2 py-2">
+                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full" style={{ backgroundColor: cfg.bgHex }}>
+                        <Icon size={12} style={{ color: cfg.textHex }} />
+                      </span>
                     </td>
                   );
                 })}
@@ -1790,16 +2080,16 @@ function TabelaProporcoesHospitais() {
 
   function corRazaoLanche(v) {
     if (v === null || v === undefined) return { cor: "#6B6357", bg: "transparent" };
-    if (v <= 1.0) return { cor: "#1F5A4A", bg: "#1F5A4A18" };
-    if (v <= 1.1) return { cor: "#A13D2B", bg: "transparent" };
-    return { cor: "#A13D2B", bg: "#A13D2B14" };
+    if (v <= 1.0) return { cor: "#0068FF", bg: "#1F5A4A18" };
+    if (v <= 1.1) return { cor: "#ED282C", bg: "transparent" };
+    return { cor: "#ED282C", bg: "#A13D2B14" };
   }
 
   function corRazaoAcomp(v) {
     if (v === null || v === undefined) return { cor: "#6B6357", bg: "transparent" };
-    if (v <= 3.0) return { cor: "#1F5A4A", bg: "#1F5A4A18" };
-    if (v <= 3.3) return { cor: "#A13D2B", bg: "transparent" };
-    return { cor: "#A13D2B", bg: "#A13D2B14" };
+    if (v <= 3.0) return { cor: "#0068FF", bg: "#1F5A4A18" };
+    if (v <= 3.3) return { cor: "#ED282C", bg: "transparent" };
+    return { cor: "#ED282C", bg: "#A13D2B14" };
   }
 
   return (
@@ -1810,15 +2100,15 @@ function TabelaProporcoesHospitais() {
           <h2 className="font-ui text-sm font-semibold uppercase tracking-wide">Indicadores de proporção — série histórica</h2>
         </div>
         <div className="flex items-center gap-4 font-mono-label text-[10px] text-[#6B6357]">
-          <span><span className="inline-block w-2 h-2 rounded-full mr-1" style={{ backgroundColor: "#1F5A4A" }} />Conforme</span>
-          <span><span className="inline-block w-2 h-2 rounded-full mr-1 bg-[#A13D2B]" />Não conforme</span>
+          <span><span className="inline-block w-2 h-2 rounded-full mr-1" style={{ backgroundColor: "#0068FF" }} />Conforme</span>
+          <span><span className="inline-block w-2 h-2 rounded-full mr-1 bg-[#ED282C]" />Não conforme</span>
         </div>
       </div>
 
       <div className="overflow-x-auto p-6">
         <table className="w-full text-sm font-ui min-w-[700px] border-collapse">
           <thead>
-            <tr className="bg-[#1C3A5A] text-white">
+            <tr className="bg-[#0C2856] text-white">
               <th className="text-left font-mono-label text-[11px] uppercase tracking-wide px-3 py-2.5 sticky left-0 bg-[#1C1A17] w-20">Hospital</th>
               <th className="text-left font-mono-label text-[11px] uppercase tracking-wide px-3 py-2.5 w-36">Indicador</th>
               {meses.map((m) => (
@@ -1878,8 +2168,8 @@ function TabelaProporcoesHospitais() {
       </div>
 
       <div className="border-t border-[#1C1A17]/15 px-6 py-3 font-mono-label text-[10px] text-[#6B6357] flex flex-wrap gap-6">
-        <span>Lanche/paciente: meta <strong className="text-[#1C1A17]">≤ 1,0</strong> · crítico <strong className="text-[#A13D2B]">&gt; 1,1</strong></span>
-        <span>Acomp./paciente: meta <strong className="text-[#1C1A17]">≤ 3,0</strong> · crítico <strong className="text-[#A13D2B]">&gt; 3,3</strong></span>
+        <span>Lanche/paciente: meta <strong className="text-[#1C1A17]">≤ 1,0</strong> · crítico <strong className="text-[#ED282C]">&gt; 1,1</strong></span>
+        <span>Acomp./paciente: meta <strong className="text-[#1C1A17]">≤ 3,0</strong> · crítico <strong className="text-[#ED282C]">&gt; 3,3</strong></span>
       </div>
     </section>
   );
@@ -1919,33 +2209,45 @@ function TelaPainel({ onVoltar }) {
   const hospitaisParaGraficos = HOSPITAIS.filter((h) => hospitaisVisiveis.has(h.sigla) || h.sigla === hospital);
 
   return (
-    <div className="min-h-screen bg-[#F4F7FA] text-[#1C1A17]" style={{ fontFamily: "'Fraunces', Georgia, serif" }}>
-      <FontesGlobais />
+    <TelaLayout>
       <BarraTopo titulo="Painel de acompanhamento" onVoltar={onVoltar} />
 
       <main className="max-w-5xl mx-auto px-6 py-10 space-y-10">
-        {/* Filtro de hospitais nos gráficos comparativos */}
+        {/* Banner: mês de referência */}
+        {(() => {
+          const ultimoIdx = Math.max(...HOSPITAIS.map((h) => HISTORICO_MOCK[h.sigla].length - 1));
+          const labelMes = HISTORICO_MOCK[HOSPITAIS[0].sigla][ultimoIdx]?.label;
+          return (
+            <div className="flex items-center gap-3 px-4 py-3 rounded-xl" style={{ backgroundColor: "#E3F2FD", border: "1px solid #BBDEFB" }}>
+              <div className="w-2 h-8 rounded-full" style={{ backgroundColor: "#0068FF" }} />
+              <div>
+                <p className="font-mono-label text-[11px] uppercase tracking-wider" style={{ color: "#0068FF" }}>Período de referência do painel</p>
+                <p className="font-ui text-sm font-semibold" style={{ color: "#0C2856" }}>
+                  Dados exibidos até <strong>{labelMes}</strong> — último mês com preenchimento registrado
+                </p>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Filtro de hospitais — todos visíveis por padrão */}
         <section className="bg-white border border-[#E2E8F0] rounded-xl p-4">
           <p className="font-mono-label text-[11px] uppercase tracking-wider text-[#6B6357] mb-3">
-            Hospitais nos gráficos comparativos — <span className="text-[#1C1A17] font-semibold">{hospital}</span> é fixo
+            Filtrar hospitais nos gráficos
           </p>
           <div className="flex flex-wrap gap-2">
             {HOSPITAIS.map((h) => {
-              const fixo = h.sigla === hospital;
-              const visivel = hospitaisVisiveis.has(h.sigla) || fixo;
+              const visivel = hospitaisVisiveis.has(h.sigla);
               return (
                 <button
                   key={h.sigla}
                   onClick={() => alternarHospitalVisivel(h.sigla)}
-                  disabled={fixo}
-                  className={`font-mono-label text-xs px-3 py-1.5 border-2 transition-colors flex items-center gap-1.5
-                    ${visivel ? "text-[#FAF7EF]" : "bg-transparent text-[#6B6357]/50 border-[#1C1A17]/15"}
-                    ${fixo ? "cursor-default" : "cursor-pointer hover:opacity-80"}`}
+                  className={`font-mono-label text-xs px-3 py-1.5 border-2 transition-all rounded-lg flex items-center gap-1.5
+                    ${visivel ? "text-white" : "bg-transparent text-[#6B6357] border-[#E2E8F0]"}`}
                   style={visivel ? { backgroundColor: h.cor, borderColor: h.cor } : {}}
                 >
-                  <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: visivel ? "#FAF7EF" : h.cor }} />
+                  <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: visivel ? "white" : h.cor }} />
                   {h.sigla}
-                  {fixo && <Lock size={10} />}
                 </button>
               );
             })}
@@ -2006,7 +2308,7 @@ function TelaPainel({ onVoltar }) {
           <div className="bg-white border border-[#E2E8F0] rounded-xl overflow-x-auto">
             <table className="w-full text-sm font-ui min-w-[900px]">
               <thead>
-                <tr className="border-b border-[#1C3A5A]/20 bg-[#1C3A5A] text-white">
+                <tr className="border-b border-[#0C2856]/20 bg-[#0C2856] text-white">
                   <th className="text-left font-mono-label text-[11px] uppercase tracking-wide px-4 py-3 sticky left-0 bg-[#1C1A17]">Artigo</th>
                   {mesesChecklist.map((m) => (
                     <th key={m.label} className="text-center font-mono-label text-[11px] uppercase tracking-wide px-3 py-3 whitespace-nowrap">
@@ -2020,7 +2322,7 @@ function TelaPainel({ onVoltar }) {
                   <tr key={item.art} className="border-b border-[#E2E8F0]">
                     <td className="px-4 py-2.5 sticky left-0 bg-[#FAF7EF]">
                       <div className="flex items-center gap-2">
-                        <span className="font-mono-label text-[#8B7355] text-sm">{romanize(idx)}</span>
+                        <span className="font-mono-label text-[#FF6700] text-sm">{romanize(idx)}</span>
                         <span className="text-xs font-medium">{item.titulo}</span>
                       </div>
                     </td>
@@ -2028,7 +2330,7 @@ function TelaPainel({ onVoltar }) {
                       if (item.metrico) {
                         return (
                           <td key={m.label} className="text-center px-3 py-2.5">
-                            <span className={`font-mono-label text-xs font-semibold ${m.abaixoDaMeta ? "text-[#A13D2B]" : "text-[#1F5A4A]"}`}>
+                            <span className={`font-mono-label text-xs font-semibold ${m.abaixoDaMeta ? "text-[#ED282C]" : "text-[#1F5A4A]"}`}>
                               {m.percentual}%
                             </span>
                           </td>
@@ -2038,8 +2340,10 @@ function TelaPainel({ onVoltar }) {
                       const cfg = statusConfig(s);
                       const Icon = cfg.icon;
                       return (
-                        <td key={m.label} className="text-center px-3 py-2.5">
-                          <Icon size={15} className="inline-block" style={{ color: cfg.hex }} />
+                        <td key={m.label} className="text-center px-2 py-2">
+                          <span className="inline-flex items-center justify-center w-6 h-6 rounded-full" style={{ backgroundColor: cfg.bgHex }}>
+                            <Icon size={12} style={{ color: cfg.textHex }} />
+                          </span>
                         </td>
                       );
                     })}
@@ -2054,7 +2358,7 @@ function TelaPainel({ onVoltar }) {
           Protótipo — histórico exibido com dados fictícios para fins de visualização.
         </p>
       </main>
-    </div>
+    </TelaLayout>
   );
 }
 
@@ -2107,6 +2411,7 @@ function BlocoGraficoICA({ hospital, hospitaisFiltrados, ponto, onSelecionarPont
           gridValues={[0, 25, 50, 75, 100]}
           formatarTick={(v) => `${v}%`}
           ariaLabel="Série histórica do Índice de Controle de Alimentação"
+          apenasPonotos={false}
         />
         <LegendaHospitais hospitaisFiltrados={hospitaisFiltrados} />
       </div>
@@ -2163,11 +2468,15 @@ function BlocoGraficoBiometria({ hospital, hospitaisFiltrados, ponto, onSelecion
           formatarTick={(v) => `${v}%`}
           linhaReferencia={META_BIOMETRIA}
           labelReferencia={`Meta ${META_BIOMETRIA}%`}
-          corAbaixoReferencia="#A13D2B"
+          corAbaixoReferencia="#ED282C"
           abaixoEhRuim={true}
           ariaLabel="Série histórica do percentual de acesso biométrico"
+          zonaOtima={{ min: 90, max: 100, label: "Conforme ≥ 90%" }}
+          zonaIntermediaria={{ min: 70, max: 90, label: "Atenção 70–89%" }}
+          zonaAlerta={{ min: 65, max: 70, label: "Crítico < 70%" }}
+          apenasPonotos={false}
         />
-        <LegendaHospitais hospitaisFiltrados={hospitaisFiltrados} corDestaque="#A13D2B" labelDestaque="ponto abaixo da meta" />
+        <LegendaHospitais hospitaisFiltrados={hospitaisFiltrados} corDestaque="#ED282C" labelDestaque="ponto abaixo da meta" />
       </div>
 
       {dado ? (
@@ -2177,7 +2486,7 @@ function BlocoGraficoBiometria({ hospital, hospitaisFiltrados, ponto, onSelecion
               {hospInfo.sigla}
             </span>
             <h3 className="font-ui font-semibold text-base">{dado.label}</h3>
-            <span className={`font-mono-label text-sm font-semibold ${dado.abaixoDaMeta ? "text-[#A13D2B]" : "text-[#1F5A4A]"}`}>
+            <span className={`font-mono-label text-sm font-semibold ${dado.abaixoDaMeta ? "text-[#ED282C]" : "text-[#1F5A4A]"}`}>
               {dado.percentual}%
             </span>
             {percentualBadge(dado.percentual, META_BIOMETRIA)}
@@ -2186,7 +2495,7 @@ function BlocoGraficoBiometria({ hospital, hospitaisFiltrados, ponto, onSelecion
           {dado.abaixoDaMeta ? (
             <div className="space-y-2 max-w-2xl">
               <div className="flex gap-2 items-start">
-                <AlertTriangle size={15} className="text-[#A13D2B] mt-0.5 flex-shrink-0" />
+                <AlertTriangle size={15} className="text-[#ED282C] mt-0.5 flex-shrink-0" />
                 <p className="font-ui text-sm">
                   <span className="font-medium">Motivo do não atingimento:</span> {dado.motivo}
                 </p>
@@ -2334,7 +2643,7 @@ function BlocoGraficoEconomia({ hospital, hospitaisFiltrados, ponto, onSeleciona
               {hospInfo.sigla}
             </span>
             <h3 className="font-ui font-semibold text-base">{dado.label}</h3>
-            <span className={`font-mono-label text-sm font-semibold ${dado.economia >= 0 ? "text-[#1F5A4A]" : "text-[#A13D2B]"}`}>
+            <span className={`font-mono-label text-sm font-semibold ${dado.economia >= 0 ? "text-[#1F5A4A]" : "text-[#ED282C]"}`}>
               {dado.economia >= 0 ? "Economia de " : "Prejuízo de "}{formatarMoeda(Math.abs(dado.economia))}
             </span>
           </div>
@@ -2398,7 +2707,7 @@ function GraficoBarrasAcumulado({ acumulados }) {
                 textAnchor="middle"
                 className="font-mono-label"
                 fontSize="10"
-                fill={a.total >= 0 ? "#1F5A4A" : "#A13D2B"}
+                fill={a.total >= 0 ? "#0068FF" : "#ED282C"}
               >
                 {formatarMoeda(a.total)}
               </text>
@@ -2500,7 +2809,7 @@ function AbaInserirConsumo() {
                 key={t.id}
                 onClick={() => setAba(t.id)}
                 className={`font-ui text-sm px-4 py-2.5 transition-colors ${i > 0 ? "border-l-2 border-[#1C1A17]" : ""}
-                  ${aba === t.id ? "bg-[#1C3A5A] text-white" : "bg-[#FAF7EF] text-[#1C1A17] hover:bg-slate-100"}`}
+                  ${aba === t.id ? "bg-[#0C2856] text-white" : "bg-[#FAF7EF] text-[#1C1A17] hover:bg-slate-100"}`}
               >
                 {t.label}
               </button>
@@ -2591,7 +2900,7 @@ function PainelReferencia({ hospital, referencia, historico, onSalvar }) {
           {!modoEdicao ? (
             <button
               onClick={iniciarEdicao}
-              className="flex items-center gap-1.5 font-mono-label text-[11px] uppercase tracking-wide px-3 py-2 border-2 border-[#8B7355] text-[#8B7355] hover:bg-[#8B7355] hover:text-[#FAF7EF] transition-colors"
+              className="flex items-center gap-1.5 font-mono-label text-[11px] uppercase tracking-wide px-3 py-2 border-2 border-[#FF6700] text-[#FF6700] hover:bg-[#FF6700] hover:text-[#FAF7EF] transition-colors"
             >
               <Pencil size={12} /> Editar referência
             </button>
@@ -2608,7 +2917,7 @@ function PainelReferencia({ hospital, referencia, historico, onSalvar }) {
                 disabled={!podeSalvar}
                 className="font-mono-label text-[11px] uppercase tracking-wide px-3 py-2 border-2 transition-colors"
                 style={podeSalvar
-                  ? { backgroundColor: "#1F5A4A", borderColor: "#1F5A4A", color: "#FAF7EF" }
+                  ? { backgroundColor: "#0068FF", borderColor: "#0068FF", color: "#FAF7EF" }
                   : { backgroundColor: "transparent", borderColor: "#1C1A17/20", color: "#6B6357", cursor: "not-allowed" }}
               >
                 Salvar alterações
@@ -2618,7 +2927,7 @@ function PainelReferencia({ hospital, referencia, historico, onSalvar }) {
         </div>
 
         {modoEdicao && (
-          <div className="bg-[#8B7355]/10 border-b-2 border-[#8B7355]/30 px-6 py-3">
+          <div className="bg-[#FF6700]/10 border-b-2 border-[#FF6700]/30 px-6 py-3">
             <p className="font-ui text-xs text-[#6B6357]">
               Modo de edição ativo — altere os valores na tabela abaixo e preencha a memória de cálculo antes de salvar.
             </p>
@@ -2651,7 +2960,7 @@ function PainelReferencia({ hospital, referencia, historico, onSalvar }) {
                             min="0"
                             value={dados[tipo][cat.id]}
                             onChange={(e) => atualizarCelula(tipo, cat.id, e.target.value)}
-                            className="w-20 text-center bg-[#F4F7FA] border-2 border-[#8B7355] py-1 px-1 font-mono-label text-sm focus:outline-none focus:border-[#1C1A17]"
+                            className="w-20 text-center bg-[#F4F7FA] border-2 border-[#FF6700] py-1 px-1 font-mono-label text-sm focus:outline-none focus:border-[#1C1A17]"
                           />
                         ) : (
                           <span className="font-mono-label">{dados[tipo][cat.id]}</span>
@@ -2668,10 +2977,10 @@ function PainelReferencia({ hospital, referencia, historico, onSalvar }) {
 
         {/* Campos de memória de cálculo + responsável (só no modo edição) */}
         {modoEdicao && (
-          <div className="border-t-2 border-[#8B7355]/30 px-6 py-5 space-y-4 bg-[#8B7355]/5">
+          <div className="border-t-2 border-[#FF6700]/30 px-6 py-5 space-y-4 bg-[#FF6700]/5">
             <div>
               <label className="font-mono-label text-[11px] uppercase tracking-wider text-[#6B6357] block mb-1.5">
-                Responsável pela alteração <span className="text-[#A13D2B]">*</span>
+                Responsável pela alteração <span className="text-[#ED282C]">*</span>
               </label>
               <input
                 type="text"
@@ -2683,7 +2992,7 @@ function PainelReferencia({ hospital, referencia, historico, onSalvar }) {
             </div>
             <div>
               <label className="font-mono-label text-[11px] uppercase tracking-wider text-[#6B6357] block mb-1.5">
-                Memória de cálculo — justificativa da alteração <span className="text-[#A13D2B]">*</span>
+                Memória de cálculo — justificativa da alteração <span className="text-[#ED282C]">*</span>
               </label>
               <p className="font-ui text-xs text-[#6B6357] mb-2">
                 Descreva a origem e o critério desta referência — média dos últimos meses, ampliação de leitos, nova fatura, decisão formal, etc.
@@ -2696,7 +3005,7 @@ function PainelReferencia({ hospital, referencia, historico, onSalvar }) {
                 className="w-full max-w-3xl bg-[#F4F7FA] border border-[#CBD5E1] focus:border-[#3D5A73] p-3 font-ui text-sm placeholder:text-[#6B6357]/50 focus:outline-none resize-y"
               />
               {!podeSalvar && (
-                <p className="font-mono-label text-[10px] text-[#A13D2B] mt-1.5 flex items-center gap-1">
+                <p className="font-mono-label text-[10px] text-[#ED282C] mt-1.5 flex items-center gap-1">
                   <AlertTriangle size={10} /> Preencha o responsável e a memória de cálculo para salvar.
                 </p>
               )}
@@ -2781,7 +3090,10 @@ function quantidadesVazias() {
   const q = {};
   TIPOS_REFEICAO.forEach((tipo) => {
     q[tipo] = {};
-    CATEGORIAS_PUBLICO.forEach((cat) => { q[tipo][cat.id] = 0; });
+    CATEGORIAS_PUBLICO.forEach((cat) => {
+      // Só cria entrada se a combinação é válida
+      q[tipo][cat.id] = combinacaoValida(tipo, cat.id) ? 0 : null;
+    });
   });
   return q;
 }
@@ -2856,7 +3168,7 @@ function PainelCadastroRealizado({ referencia, realizadoHospital, mesesCadastrad
                     key={m.label}
                     onClick={() => setMesIdxEscolhaPendente(i)}
                     className={`font-mono-label text-xs px-3 py-2 border-2 transition-colors flex items-center gap-1.5
-                      ${i === mesIdxEscolhaPendente ? "bg-[#1C3A5A] text-white border-[#1C1A17]" : "border-[#1C1A17]/30 text-[#2B2723] hover:border-[#1C1A17]"}`}
+                      ${i === mesIdxEscolhaPendente ? "bg-[#0C2856] text-white border-[#1C1A17]" : "border-[#1C1A17]/30 text-[#2B2723] hover:border-[#1C1A17]"}`}
                   >
                     {cadastrado && <Check size={12} className={i === mesIdxEscolhaPendente ? "text-[#7FBFA8]" : "text-[#1F5A4A]"} />}
                     {m.label}
@@ -2868,7 +3180,7 @@ function PainelCadastroRealizado({ referencia, realizadoHospital, mesesCadastrad
             <div className="flex items-center gap-3 flex-wrap">
               <button
                 onClick={iniciarLancamento}
-                className="font-ui text-sm font-medium px-6 py-3 border-2 border-[#8B7355] bg-[#8B7355] text-[#1C1A17] hover:bg-[#A68968] transition-colors"
+                className="font-ui text-sm font-medium px-6 py-3 border-2 border-[#FF6700] bg-[#FF6700] text-[#1C1A17] hover:bg-[#A68968] transition-colors"
               >
                 Iniciar lançamento — {realizadoHospital[mesIdxEscolhaPendente].label}
               </button>
@@ -2907,7 +3219,7 @@ function PainelCadastroRealizado({ referencia, realizadoHospital, mesesCadastrad
                 <Check size={13} /> {mesAtualInfo.label} já está cadastrado — os valores abaixo são os atualmente registrados
               </p>
             ) : (
-              <p className="font-mono-label text-[11px] uppercase tracking-wider text-[#A13D2B] border-2 border-[#A13D2B] bg-[#A13D2B]/5 px-3 py-2 inline-flex items-center gap-2">
+              <p className="font-mono-label text-[11px] uppercase tracking-wider text-[#ED282C] border-2 border-[#ED282C] bg-[#ED282C]/5 px-3 py-2 inline-flex items-center gap-2">
                 <AlertTriangle size={13} /> {mesAtualInfo.label} ainda não foi cadastrado — preencha as quantidades abaixo
               </p>
             )}
@@ -2926,17 +3238,24 @@ function PainelCadastroRealizado({ referencia, realizadoHospital, mesesCadastrad
                   {TIPOS_REFEICAO.map((tipo) => (
                     <tr key={tipo} className="border-b border-[#E2E8F0]">
                       <td className="px-3 py-2 text-xs font-medium">{tipo}</td>
-                      {CATEGORIAS_PUBLICO.map((cat) => (
-                        <td key={cat.id} className="text-center px-2 py-1.5">
-                          <input
-                            type="number"
-                            min="0"
-                            value={rascunho[tipo][cat.id]}
-                            onChange={(e) => atualizarRascunho(tipo, cat.id, e.target.value)}
-                            className="w-20 text-center bg-white border border-[#1C1A17]/30 font-mono-label text-sm py-1.5 focus:border-[#3D5A73] focus:outline-none"
-                          />
-                        </td>
-                      ))}
+                      {CATEGORIAS_PUBLICO.map((cat) => {
+                        const valido = combinacaoValida(tipo, cat.id);
+                        return (
+                          <td key={cat.id} className="text-center px-2 py-1.5">
+                            {valido ? (
+                              <input
+                                type="number"
+                                min="0"
+                                value={rascunho[tipo][cat.id] ?? 0}
+                                onChange={(e) => atualizarRascunho(tipo, cat.id, e.target.value)}
+                                className="w-20 text-center bg-white border border-[#1C1A17]/30 font-mono-label text-sm py-1.5 focus:border-[#3D5A73] focus:outline-none"
+                              />
+                            ) : (
+                              <span className="inline-block w-20 py-1.5 text-center font-mono-label text-xs text-[#CBD5E1] bg-[#F8FAFD] border border-[#E2E8F0] rounded select-none">—</span>
+                            )}
+                          </td>
+                        );
+                      })}
                     </tr>
                   ))}
                 </tbody>
@@ -2955,7 +3274,7 @@ function PainelCadastroRealizado({ referencia, realizadoHospital, mesesCadastrad
                 )}
                 <button
                   onClick={handleRegistrar}
-                  className="font-ui text-sm font-medium px-6 py-3 border-2 border-[#8B7355] bg-[#8B7355] text-[#1C1A17] hover:bg-[#A68968] transition-colors"
+                  className="font-ui text-sm font-medium px-6 py-3 border-2 border-[#FF6700] bg-[#FF6700] text-[#1C1A17] hover:bg-[#A68968] transition-colors"
                 >
                   Registrar consumo de alimentação
                 </button>
@@ -2995,7 +3314,7 @@ function PainelCadastroRealizado({ referencia, realizadoHospital, mesesCadastrad
             <tbody>
               {CATEGORIAS_PUBLICO.map((cat) => (
                 <React.Fragment key={cat.id}>
-                  <tr className="bg-[#1C3A5A] text-white">
+                  <tr className="bg-[#0C2856] text-white">
                     <td colSpan={2 + realizadoHospital.length} className="px-3 py-1.5 font-ui text-xs font-semibold uppercase tracking-wide sticky left-0 bg-[#1C1A17]">
                       {cat.label}
                     </td>
@@ -3029,66 +3348,18 @@ function PainelCadastroRealizado({ referencia, realizadoHospital, mesesCadastrad
 
 function TelaHomeMedicamentos({ onIrPara, onVoltarProduto }) {
   return (
-    <div className="min-h-screen bg-[#F4F7FA] flex flex-col" style={{ fontFamily: "'Fraunces', Georgia, serif" }}>
-      <FontesGlobais />
-      <header className="bg-[#1C3A5A] text-white shadow-md">
-        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <button onClick={onVoltarProduto} className="text-white/70 hover:text-white transition-colors flex-shrink-0" aria-label="Voltar">
-              <ArrowLeft size={18} />
-            </button>
-            <img src={LOGO_PE_BASE64} alt="Governo de Pernambuco" style={{ height: 24 }} />
-            <div className="w-px h-6 bg-white/20" />
-            <div>
-              <p className="font-ui text-sm font-semibold leading-tight">Medicamentos</p>
-              <p className="font-mono-label text-[10px] text-white/60 uppercase tracking-wide">Controle Interno — SES-PE</p>
-            </div>
-          </div>
-          <img src={LOGO_SCI_BASE64} alt="SCI" style={{ height: 30 }} />
-        </div>
-      </header>
-
-      <main className="flex-1 flex items-center justify-center px-6 py-10">
-        <div className="max-w-3xl w-full">
-          <p className="font-mono-label text-[11px] uppercase tracking-[0.18em] text-[#6B7A8D] mb-2">O que você deseja fazer?</p>
-          <h1 className="font-display text-3xl font-bold mb-8" style={{ color: "#1C3A5A" }}>Selecione uma ação</h1>
-
-          <div className="grid sm:grid-cols-2 gap-5">
-            <button
-              onClick={() => onIrPara("monitoramentoMedicamentos")}
-              className="text-left bg-white rounded-2xl p-6 hover:shadow-xl hover:-translate-y-1 transition-all group"
-              style={{ border: "1.5px solid #C8E6C9", boxShadow: "0 2px 12px rgba(31,90,74,0.07)" }}
-            >
-              <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4" style={{ backgroundColor: "#E8F5E9" }}>
-                <ClipboardList size={24} style={{ color: "#1F5A4A" }} />
-              </div>
-              <div className="w-6 h-0.5 rounded-full mb-3" style={{ backgroundColor: "#1F5A4A" }} />
-              <p className="font-display text-lg font-bold mb-2" style={{ color: "#1F5A4A" }}>Realizar monitoramento</p>
-              <p className="font-ui text-sm leading-relaxed" style={{ color: "#4A5568" }}>
-                Registrar inventários e testes de acurácia por estoque e setor de farmácia.
-              </p>
-            </button>
-
-            <button
-              onClick={() => onIrPara("painelMedicamentos")}
-              className="text-left bg-white rounded-2xl p-6 hover:shadow-xl hover:-translate-y-1 transition-all group"
-              style={{ border: "1.5px solid #BBDEFB", boxShadow: "0 2px 12px rgba(61,90,115,0.07)" }}
-            >
-              <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4" style={{ backgroundColor: "#E3F2FD" }}>
-                <BarChart3 size={24} style={{ color: "#3D5A73" }} />
-              </div>
-              <div className="w-6 h-0.5 rounded-full mb-3" style={{ backgroundColor: "#3D5A73" }} />
-              <p className="font-display text-lg font-bold mb-2" style={{ color: "#3D5A73" }}>Visualizar painel</p>
-              <p className="font-ui text-sm leading-relaxed" style={{ color: "#4A5568" }}>
-                Acompanhar a acurácia dos estoques e o histórico de inventários ao longo do tempo.
-              </p>
-            </button>
-          </div>
-        </div>
-      </main>
-    </div>
+    <HomeTela
+      titulo="Medicamentos"
+      subtitulo="Medicamentos"
+      onVoltar={onVoltarProduto}
+      acoes={[
+        { label: "Realizar monitoramento", descricao: "Registrar inventários e verificações de acurácia por estoque e setor de farmácia.", icone: ClipboardList, onClick: () => onIrPara("monitoramentoMedicamentos") },
+        { label: "Visualizar painel", descricao: "Acompanhar a acurácia dos estoques, periodicidade sugerida e histórico de inventários.", icone: BarChart3, onClick: () => onIrPara("painelMedicamentos") },
+      ]}
+    />
   );
 }
+
 
 // ---------- Monitoramento de Medicamentos: escolha do estoque + inventário + acurácia ----------
 function TelaMonitoramentoMedicamentos({ onVoltar, estoques, setEstoques, historicoPorEstoque, setHistoricoPorEstoque }) {
@@ -3106,10 +3377,10 @@ function TelaMonitoramentoMedicamentos({ onVoltar, estoques, setEstoques, histor
     }));
   }
 
-  function registrarAcuracia(estoqueId, registro) {
+  function registrarVerificacao(estoqueId, registro) {
     setHistoricoPorEstoque((prev) => ({
       ...prev,
-      [estoqueId]: { ...prev[estoqueId], acuracias: [registro, ...prev[estoqueId].acuracias] },
+      [estoqueId]: { ...prev[estoqueId], verificacoes: [registro, ...prev[estoqueId].verificacoes] },
     }));
   }
 
@@ -3122,7 +3393,7 @@ function TelaMonitoramentoMedicamentos({ onVoltar, estoques, setEstoques, histor
     setEstoques((prev) => [...prev, ...comId]);
     setHistoricoPorEstoque((prev) => {
       const copia = { ...prev };
-      comId.forEach((s) => { copia[s.id] = { inventarios: [], acuracias: [] }; });
+      comId.forEach((s) => { copia[s.id] = { inventarios: [], verificacoes: [] }; });
       return copia;
     });
     setShowAddSetor(false);
@@ -3135,9 +3406,8 @@ function TelaMonitoramentoMedicamentos({ onVoltar, estoques, setEstoques, histor
 
   if (!estoqueAtual) {
     return (
-      <div className="min-h-screen bg-[#F4F7FA] text-[#1C1A17]" style={{ fontFamily: "'Fraunces', Georgia, serif" }}>
-        <FontesGlobais />
-        <BarraTopo titulo="Realizar monitoramento" onVoltar={onVoltar} produto="Medicamentos" />
+      <TelaLayout>
+      <BarraTopo titulo="Realizar monitoramento" onVoltar={onVoltar} produto="Medicamentos" />
 
         <main className="max-w-3xl mx-auto px-6 py-14">
           <div className="flex items-start justify-between gap-4 mb-2 flex-wrap">
@@ -3148,20 +3418,20 @@ function TelaMonitoramentoMedicamentos({ onVoltar, estoques, setEstoques, histor
             <button
               onClick={() => setShowAddSetor(true)}
               className="font-ui text-sm font-medium px-4 py-2.5 border-2 flex items-center gap-2 flex-shrink-0"
-              style={{ borderColor: "#8B7355", backgroundColor: "#8B7355", color: "#1C1A17" }}
+              style={{ borderColor: "#FF6700", backgroundColor: "#FF6700", color: "#1C1A17" }}
             >
               <Plus size={16} /> Adicionar setor
             </button>
           </div>
           <p className="font-ui text-sm text-[#6B6357] mb-10 max-w-xl">
-            Cada estoque tem seu próprio histórico de inventários e de testes de acurácia, com responsável próprio.
-            Novos setores cadastrados aqui ficam disponíveis tanto para inventário quanto para teste de acurácia.
+            Cada estoque tem seu próprio histórico de inventários e de verificações de acurácia, com responsável próprio.
+            Novos setores cadastrados aqui ficam disponíveis tanto para inventário quanto para verificação de acurácia.
           </p>
 
           <div className="flex flex-col gap-3">
             {estoques.map((e) => {
-              const hist = historicoPorEstoque[e.id] || { inventarios: [], acuracias: [] };
-              const ultimaAcuracia = hist.acuracias[0];
+              const hist = historicoPorEstoque[e.id] || { inventarios: [], verificacoes: [] };
+              const ultimaAcuracia = hist.verificacoes[0];
               const acuraciaRuim = ultimaAcuracia && ultimaAcuracia.percentual < META_ACURACIA;
               return (
                 <div
@@ -3187,7 +3457,7 @@ function TelaMonitoramentoMedicamentos({ onVoltar, estoques, setEstoques, histor
                       onClick={() => { setEstoqueId(e.id); setAcaoAtiva("acuracia"); }}
                       className="font-ui text-sm px-4 py-2.5 border-2 transition-colors flex items-center gap-2"
                       style={acuraciaRuim
-                        ? { borderColor: "#A13D2B", color: "#A13D2B" }
+                        ? { borderColor: "#ED282C", color: "#ED282C" }
                         : { borderColor: "#1C1A17" }}
                       onMouseEnter={(ev) => { if (!acuraciaRuim) { ev.currentTarget.style.backgroundColor = "#1C1A17"; ev.currentTarget.style.color = "#FAF7EF"; } }}
                       onMouseLeave={(ev) => { if (!acuraciaRuim) { ev.currentTarget.style.backgroundColor = ""; ev.currentTarget.style.color = ""; } }}
@@ -3195,7 +3465,7 @@ function TelaMonitoramentoMedicamentos({ onVoltar, estoques, setEstoques, histor
                       <BarChart3 size={15} />
                       Acurácia
                       <span className="font-mono-label text-[11px] opacity-70">
-                        · {ultimaAcuracia ? `${ultimaAcuracia.percentual}%` : hist.acuracias.length}
+                        · {ultimaAcuracia ? `${ultimaAcuracia.percentual}%` : hist.verificacoes.length}
                       </span>
                     </button>
 
@@ -3222,15 +3492,14 @@ function TelaMonitoramentoMedicamentos({ onVoltar, estoques, setEstoques, histor
             onSalvar={(nome, responsavel) => editarSetor(setorEmEdicao.id, nome, responsavel)}
           />
         )}
-      </div>
+      </TelaLayout>
     );
   }
 
   if (acaoAtiva === "inventario") {
     return (
-      <div className="min-h-screen bg-[#F4F7FA] text-[#1C1A17]" style={{ fontFamily: "'Fraunces', Georgia, serif" }}>
-        <FontesGlobais />
-        <BarraTopo titulo="Realizar monitoramento" onVoltar={() => { setEstoqueId(null); setAcaoAtiva(null); }} produto="Medicamentos" />
+      <TelaLayout>
+      <BarraTopo titulo="Realizar monitoramento" onVoltar={() => { setEstoqueId(null); setAcaoAtiva(null); }} produto="Medicamentos" />
         <main className="max-w-2xl mx-auto px-6 py-10">
           <div className="mb-6">
             <p className="font-mono-label text-[11px] uppercase tracking-wider text-[#6B6357]">{estoqueAtual.nome}</p>
@@ -3241,26 +3510,25 @@ function TelaMonitoramentoMedicamentos({ onVoltar, estoques, setEstoques, histor
             Protótipo — dados não são salvos entre sessões.
           </p>
         </main>
-      </div>
+      </TelaLayout>
     );
   }
 
   if (acaoAtiva === "acuracia") {
     return (
-      <div className="min-h-screen bg-[#F4F7FA] text-[#1C1A17]" style={{ fontFamily: "'Fraunces', Georgia, serif" }}>
-        <FontesGlobais />
-        <BarraTopo titulo="Realizar monitoramento" onVoltar={() => { setEstoqueId(null); setAcaoAtiva(null); }} produto="Medicamentos" />
+      <TelaLayout>
+      <BarraTopo titulo="Realizar monitoramento" onVoltar={() => { setEstoqueId(null); setAcaoAtiva(null); }} produto="Medicamentos" />
         <main className="max-w-2xl mx-auto px-6 py-10">
           <div className="mb-6">
             <p className="font-mono-label text-[11px] uppercase tracking-wider text-[#6B6357]">{estoqueAtual.nome}</p>
-            <h1 className="font-display text-xl font-medium mt-1">Teste de acurácia</h1>
+            <h1 className="font-display text-xl font-medium mt-1">Verificação de acurácia</h1>
           </div>
-          <FormularioAcuracia estoqueId={estoqueId} historico={historicoPorEstoque[estoqueId].acuracias} inventarios={historicoPorEstoque[estoqueId].inventarios} onRegistrar={registrarAcuracia} />
+          <FormularioVerificacaoAcuracia estoqueId={estoqueId} historico={historicoPorEstoque[estoqueId].verificacoes} inventarios={historicoPorEstoque[estoqueId].inventarios} onRegistrar={registrarVerificacao} />
           <p className="font-mono-label text-[10px] text-[#6B6357] mt-8 text-center">
             Protótipo — dados não são salvos entre sessões.
           </p>
         </main>
-      </div>
+      </TelaLayout>
     );
   }
 
@@ -3296,7 +3564,7 @@ function ModalAdicionarSetor({ onFechar, onAdicionar }) {
         <div className="border-b-2 border-[#E2E8F0] px-6 py-4" style={{ backgroundColor: "#FAF7EF" }}>
           <h3 className="font-ui font-semibold text-lg">Adicionar setores</h3>
           <p className="font-mono-label text-[11px] text-[#6B6357] mt-1">
-            Cadastre quantos setores precisar de uma vez. Cada um fica disponível para inventário e teste de acurácia.
+            Cadastre quantos setores precisar de uma vez. Cada um fica disponível para inventário e verificação de acurácia.
           </p>
         </div>
 
@@ -3306,7 +3574,7 @@ function ModalAdicionarSetor({ onFechar, onAdicionar }) {
               <div className="flex items-center justify-between">
                 <span className="font-mono-label text-[11px] text-[#6B6357]">Setor {idx + 1}</span>
                 {linhas.length > 1 && (
-                  <button onClick={() => removerLinha(idx)} className="text-[#6B6357]/60 hover:text-[#A13D2B]" aria-label="Remover setor">
+                  <button onClick={() => removerLinha(idx)} className="text-[#6B6357]/60 hover:text-[#ED282C]" aria-label="Remover setor">
                     <X size={14} />
                   </button>
                 )}
@@ -3354,7 +3622,7 @@ function ModalAdicionarSetor({ onFechar, onAdicionar }) {
             disabled={!podeAdicionar}
             className="font-ui text-sm font-medium px-5 py-2 border-2 transition-colors"
             style={podeAdicionar
-              ? { borderColor: "#8B7355", backgroundColor: "#8B7355", color: "#1C1A17" }
+              ? { borderColor: "#FF6700", backgroundColor: "#FF6700", color: "#1C1A17" }
               : { borderColor: "rgba(31,27,22,0.2)", color: "rgba(91,83,71,0.4)", cursor: "not-allowed" }}
           >
             {linhasValidas.length > 1 ? `Adicionar ${linhasValidas.length} setores` : "Adicionar setor"}
@@ -3412,7 +3680,7 @@ function ModalEditarSetor({ setor, onFechar, onSalvar }) {
             disabled={!podeSalvar}
             className="font-ui text-sm font-medium px-5 py-2 border-2 transition-colors"
             style={podeSalvar
-              ? { borderColor: "#8B7355", backgroundColor: "#8B7355", color: "#1C1A17" }
+              ? { borderColor: "#FF6700", backgroundColor: "#FF6700", color: "#1C1A17" }
               : { borderColor: "rgba(31,27,22,0.2)", color: "rgba(91,83,71,0.4)", cursor: "not-allowed" }}
           >
             Salvar alterações
@@ -3427,38 +3695,29 @@ function FormularioInventario({ estoqueId, historico, onRegistrar }) {
   const hoje = new Date().toISOString().slice(0, 10);
   const [data, setData] = useState(hoje);
   const [responsavel, setResponsavel] = useState("");
-  const [divergencias, setDivergencias] = useState([]);
+  const [linkRelatorio, setLinkRelatorio] = useState("");
+  const [observacoes, setObservacoes] = useState("");
   const [confirmado, setConfirmado] = useState(false);
-
-  function adicionarDivergencia() {
-    setDivergencias((prev) => [...prev, { identificada: "", corrigida: "" }]);
-  }
-  function atualizarDivergencia(idx, campo, valor) {
-    setDivergencias((prev) => prev.map((d, i) => (i === idx ? { ...d, [campo]: valor } : d)));
-  }
-  function removerDivergencia(idx) {
-    setDivergencias((prev) => prev.filter((_, i) => i !== idx));
-  }
 
   function handleRegistrar() {
     if (!responsavel.trim()) return;
-    const divergenciasPreenchidas = divergencias.filter((d) => d.identificada.trim() || d.corrigida.trim());
-    onRegistrar(estoqueId, { data, responsavel, divergencias: divergenciasPreenchidas });
-    setDivergencias([]);
+    onRegistrar(estoqueId, { data, responsavel, linkRelatorio, observacoes });
+    setLinkRelatorio("");
+    setObservacoes("");
     setConfirmado(true);
     setTimeout(() => setConfirmado(false), 2000);
   }
 
   return (
     <section className="bg-white border border-[#E2E8F0] rounded-xl flex flex-col">
-      <div className="border-b-2 border-[#E2E8F0] px-6 py-3 flex items-center gap-2">
+      <div className="border-b border-[#E2E8F0] px-6 py-3 flex items-center gap-2">
         <ClipboardList size={16} />
         <h2 className="font-ui text-sm font-semibold uppercase tracking-wide">Inventário realizado</h2>
       </div>
 
       <div className="p-6 space-y-4 flex-1">
         <p className="font-ui text-xs text-[#6B6357]">
-          Registro de execução do inventário periódico, sob responsabilidade da área (farmácia ou suprimentos).
+          Registro de execução do inventário periódico. Anexe o relatório do sistema no Google Drive e informe o link abaixo.
         </p>
 
         <div className="grid grid-cols-2 gap-3">
@@ -3472,7 +3731,7 @@ function FormularioInventario({ estoqueId, historico, onRegistrar }) {
             />
           </div>
           <div>
-            <label className="font-mono-label text-[11px] uppercase tracking-wider text-[#6B6357] block mb-1.5">Responsável</label>
+            <label className="font-mono-label text-[11px] uppercase tracking-wider text-[#6B6357] block mb-1.5">Responsável pelo inventário</label>
             <input
               type="text"
               value={responsavel}
@@ -3485,60 +3744,42 @@ function FormularioInventario({ estoqueId, historico, onRegistrar }) {
 
         <div>
           <label className="font-mono-label text-[11px] uppercase tracking-wider text-[#6B6357] block mb-1.5">
-            Divergências identificadas e corrigidas (opcional)
+            Link do relatório de inventário no Google Drive <span className="text-[#ED282C]">*</span>
           </label>
-          {divergencias.length > 0 && (
-            <div className="space-y-3 mb-2">
-              {divergencias.map((d, idx) => (
-                <div key={idx} className="border border-[#E2E8F0] rounded-lg bg-white p-3 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono-label text-[11px] text-[#6B6357]">Divergência {idx + 1}</span>
-                    <button
-                      onClick={() => removerDivergencia(idx)}
-                      className="text-[#6B6357]/60 hover:text-[#A13D2B]"
-                      aria-label="Remover divergência"
-                    >
-                      <X size={14} />
-                    </button>
-                  </div>
-                  <div>
-                    <label className="font-ui text-xs text-[#6B6357] block mb-1">Divergência identificada</label>
-                    <textarea
-                      value={d.identificada}
-                      onChange={(e) => atualizarDivergencia(idx, "identificada", e.target.value)}
-                      placeholder="Ex.: sistema apontava 40 unidades, contagem física encontrou 36..."
-                      rows={1}
-                      className="w-full bg-[#FAF7EF] border border-[#1C1A17]/20 p-2 font-ui text-sm placeholder:text-[#6B6357]/50 focus:outline-none focus:border-[#3D5A73] resize-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="font-ui text-xs text-[#6B6357] block mb-1">Correção realizada</label>
-                    <textarea
-                      value={d.corrigida}
-                      onChange={(e) => atualizarDivergencia(idx, "corrigida", e.target.value)}
-                      placeholder="Ex.: ajuste de saldo no sistema, lote com validade vencida descartado..."
-                      rows={1}
-                      className="w-full bg-[#FAF7EF] border border-[#1C1A17]/20 p-2 font-ui text-sm placeholder:text-[#6B6357]/50 focus:outline-none focus:border-[#3D5A73] resize-none"
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
+          <input
+            type="url"
+            value={linkRelatorio}
+            onChange={(e) => setLinkRelatorio(e.target.value)}
+            placeholder="https://drive.google.com/..."
+            className="w-full bg-white border border-[#CBD5E1] focus:border-[#3D5A73] py-2 px-3 font-ui text-sm focus:outline-none rounded"
+          />
+          {linkRelatorio && (
+            <a href={linkRelatorio} target="_blank" rel="noreferrer"
+              className="font-mono-label text-[10px] text-[#3D5A73] underline mt-1 inline-block">
+              Abrir relatório →
+            </a>
           )}
-          <button
-            onClick={adicionarDivergencia}
-            className="font-mono-label text-[11px] uppercase tracking-wide text-[#6B6357] underline decoration-dotted hover:text-[#1C1A17] flex items-center gap-1"
-          >
-            <Plus size={12} /> adicionar divergência
-          </button>
+        </div>
+
+        <div>
+          <label className="font-mono-label text-[11px] uppercase tracking-wider text-[#6B6357] block mb-1.5">
+            Observações (opcional)
+          </label>
+          <textarea
+            value={observacoes}
+            onChange={(e) => setObservacoes(e.target.value)}
+            placeholder="Observações adicionais sobre o inventário..."
+            rows={2}
+            className="w-full bg-white border border-[#CBD5E1] focus:border-[#3D5A73] p-2 font-ui text-sm placeholder:text-[#6B6357]/50 focus:outline-none resize-none rounded"
+          />
         </div>
 
         <div className="flex items-center gap-3">
           <button
             onClick={handleRegistrar}
             disabled={!responsavel.trim()}
-            className={`font-ui text-sm font-medium px-5 py-2.5 border-2 transition-colors
-              ${responsavel.trim() ? "border-[#8B7355] bg-[#8B7355] text-[#1C1A17] hover:bg-[#A68968]" : "border-[#1C1A17]/20 text-[#6B6357]/40 cursor-not-allowed"}`}
+            className={`font-ui text-sm font-medium px-5 py-2.5 border-2 transition-colors rounded-lg
+              ${responsavel.trim() ? "border-[#FF6700] bg-[#FF6700] text-white hover:bg-[#A68968]" : "border-[#E2E8F0] text-[#6B6357]/40 cursor-not-allowed"}`}
           >
             Registrar inventário
           </button>
@@ -3558,18 +3799,18 @@ function FormularioInventario({ estoqueId, historico, onRegistrar }) {
           <ul className="space-y-2 max-h-44 overflow-y-auto">
             {historico.map((h, i) => (
               <li key={i} className="font-ui text-xs border-b border-[#E2E8F0] pb-2">
-                <span className="font-mono-label text-[#1C1A17] font-medium">{new Date(h.data).toLocaleDateString("pt-BR")}</span>
-                {" — "}{h.responsavel}
-                {h.divergencias && h.divergencias.length > 0 && (
-                  <div className="mt-1 space-y-1">
-                    {h.divergencias.map((d, di) => (
-                      <p key={di} className="text-[#A13D2B]">
-                        <span className="font-medium">Divergência:</span> {d.identificada || "—"}
-                        {d.corrigida && <><br /><span className="font-medium text-[#1F5A4A]">Correção:</span> {d.corrigida}</>}
-                      </p>
-                    ))}
-                  </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-mono-label text-[#0C2856] font-medium">{new Date(h.data).toLocaleDateString("pt-BR")}</span>
+                  <span className="text-[#6B6357]">—</span>
+                  <span className="font-semibold text-[#1C1A17]">{h.responsavel}</span>
+                </div>
+                {h.linkRelatorio && (
+                  <a href={h.linkRelatorio} target="_blank" rel="noreferrer"
+                    className="font-mono-label text-[10px] text-[#3D5A73] underline mt-0.5 inline-block">
+                    Ver relatório →
+                  </a>
                 )}
+                {h.observacoes && <p className="text-[#6B6357] mt-0.5">{h.observacoes}</p>}
               </li>
             ))}
           </ul>
@@ -3578,8 +3819,7 @@ function FormularioInventario({ estoqueId, historico, onRegistrar }) {
     </section>
   );
 }
-
-function FormularioAcuracia({ estoqueId, historico, inventarios, onRegistrar }) {
+function FormularioVerificacaoAcuracia({ estoqueId, historico, inventarios, onRegistrar }) {
   const hoje = new Date().toISOString().slice(0, 10);
   const [data, setData] = useState(hoje);
   const [percentual, setPercentual] = useState("");
@@ -3590,7 +3830,7 @@ function FormularioAcuracia({ estoqueId, historico, inventarios, onRegistrar }) 
   const abaixoMeta = percentualNum !== null && !Number.isNaN(percentualNum) && percentualNum < META_ACURACIA;
   const critico = percentualNum !== null && !Number.isNaN(percentualNum) && percentualNum < LIMITE_CRITICO_ACURACIA;
 
-  // Calcula quantos dias corridos se passaram entre a data do teste de acurácia
+  // Calcula quantos dias corridos se passaram entre a data do verificação de acurácia
   // e o último inventário registrado ANTES dessa data neste mesmo setor.
   function diasDesdeUltimoInventario(dataAcuracia) {
     if (!inventarios || inventarios.length === 0) return null;
@@ -3616,7 +3856,7 @@ function FormularioAcuracia({ estoqueId, historico, inventarios, onRegistrar }) 
     <section className="bg-white border border-[#E2E8F0] rounded-xl flex flex-col">
       <div className="border-b-2 border-[#E2E8F0] px-6 py-3 flex items-center gap-2">
         <BarChart3 size={16} />
-        <h2 className="font-ui text-sm font-semibold uppercase tracking-wide">Teste de acurácia (UCI)</h2>
+        <h2 className="font-ui text-sm font-semibold uppercase tracking-wide">Verificação de acurácia (UCI)</h2>
       </div>
 
       <div className="p-6 space-y-4 flex-1">
@@ -3636,13 +3876,16 @@ function FormularioAcuracia({ estoqueId, historico, inventarios, onRegistrar }) 
           </div>
           <div>
             <label className="font-mono-label text-[11px] uppercase tracking-wider text-[#6B6357] block mb-1.5">Aplicado por</label>
-            <input
-              type="text"
+            <select
               value={aplicadoPor}
               onChange={(e) => setAplicadoPor(e.target.value)}
-              placeholder="Servidor da UCI"
-              className="w-full bg-white border border-[#CBD5E1] py-2 px-2 font-ui text-sm placeholder:text-[#6B6357]/50 focus:outline-none focus:border-[#3D5A73]"
-            />
+              className="w-full bg-white border border-[#CBD5E1] py-2 px-2 font-ui text-sm focus:outline-none focus:border-[#3D5A73]"
+            >
+              <option value="">— Selecione o servidor —</option>
+              {SERVIDORES_UCI.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
           </div>
         </div>
 
@@ -3658,11 +3901,11 @@ function FormularioAcuracia({ estoqueId, historico, inventarios, onRegistrar }) 
               onChange={(e) => setPercentual(e.target.value)}
               placeholder="0,0"
               className={`w-28 border-2 py-2 px-3 font-ui text-lg font-semibold focus:outline-none bg-white
-                ${critico ? "border-[#A13D2B] text-[#A13D2B] ring-2 ring-[#A13D2B]/30" : abaixoMeta ? "border-[#A13D2B] text-[#A13D2B]" : "border-[#1C1A17]/30 text-[#1C1A17] focus:border-[#3D5A73]"}`}
+                ${critico ? "border-[#ED282C] text-[#ED282C] ring-2 ring-[#A13D2B]/30" : abaixoMeta ? "border-[#ED282C] text-[#ED282C]" : "border-[#1C1A17]/30 text-[#1C1A17] focus:border-[#3D5A73]"}`}
             />
             <span className="font-ui text-lg text-[#6B6357]">%</span>
             {abaixoMeta && !critico && (
-              <span className="font-mono-label text-[11px] uppercase tracking-wider px-2 py-1 border-2 border-[#A13D2B] text-[#A13D2B]">
+              <span className="font-mono-label text-[11px] uppercase tracking-wider px-2 py-1 border-2 border-[#ED282C] text-[#ED282C]">
                 Abaixo da meta
               </span>
             )}
@@ -3670,9 +3913,9 @@ function FormularioAcuracia({ estoqueId, historico, inventarios, onRegistrar }) 
         </div>
 
         {critico && (
-          <div className="border-2 border-[#A13D2B] bg-[#A13D2B]/10 p-3 flex items-start gap-2">
-            <AlertTriangle size={16} className="text-[#A13D2B] flex-shrink-0 mt-0.5" />
-            <p className="font-ui text-sm text-[#A13D2B] font-medium">
+          <div className="border-2 border-[#ED282C] bg-[#ED282C]/10 p-3 flex items-start gap-2">
+            <AlertTriangle size={16} className="text-[#ED282C] flex-shrink-0 mt-0.5" />
+            <p className="font-ui text-sm text-[#ED282C] font-medium">
               Acurácia abaixo de {LIMITE_CRITICO_ACURACIA}% — recomenda-se inventário imediato para este estoque,
               fora do calendário periódico normal.
             </p>
@@ -3684,9 +3927,9 @@ function FormularioAcuracia({ estoqueId, historico, inventarios, onRegistrar }) 
             onClick={handleRegistrar}
             disabled={!aplicadoPor.trim() || percentual === ""}
             className={`font-ui text-sm font-medium px-5 py-2.5 border-2 transition-colors
-              ${aplicadoPor.trim() && percentual !== "" ? "border-[#8B7355] bg-[#8B7355] text-[#1C1A17] hover:bg-[#A68968]" : "border-[#1C1A17]/20 text-[#6B6357]/40 cursor-not-allowed"}`}
+              ${aplicadoPor.trim() && percentual !== "" ? "border-[#FF6700] bg-[#FF6700] text-[#1C1A17] hover:bg-[#A68968]" : "border-[#1C1A17]/20 text-[#6B6357]/40 cursor-not-allowed"}`}
           >
-            Registrar teste de acurácia
+            Registrar verificação de acurácia
           </button>
           {confirmado && (
             <span className="font-mono-label text-[11px] text-[#1F5A4A] flex items-center gap-1">
@@ -3699,7 +3942,7 @@ function FormularioAcuracia({ estoqueId, historico, inventarios, onRegistrar }) 
       <div className="border-t border-[#E2E8F0] p-4">
         <p className="font-mono-label text-[11px] uppercase tracking-wider text-[#6B6357] mb-2">Histórico recente</p>
         {historico.length === 0 ? (
-          <p className="font-ui text-xs text-[#6B6357]">Nenhum teste de acurácia registrado ainda.</p>
+          <p className="font-ui text-xs text-[#6B6357]">Nenhum verificação de acurácia registrado ainda.</p>
         ) : (
           <ul className="space-y-2 max-h-52 overflow-y-auto">
             {historico.map((h, i) => {
@@ -3712,7 +3955,7 @@ function FormularioAcuracia({ estoqueId, historico, inventarios, onRegistrar }) 
                       <span className="font-mono-label text-[#1C1A17] font-medium">{new Date(h.data).toLocaleDateString("pt-BR")}</span>
                       {" — "}{h.aplicadoPor}
                     </span>
-                    <span className="font-mono-label font-semibold" style={{ color: ruim ? "#A13D2B" : "#1F5A4A" }}>
+                    <span className="font-mono-label font-semibold" style={{ color: ruim ? "#ED282C" : "#0068FF" }}>
                       {h.percentual}%
                     </span>
                   </div>
@@ -3739,131 +3982,366 @@ function FormularioAcuracia({ estoqueId, historico, inventarios, onRegistrar }) 
 
 // ---------- Painel de Medicamentos (placeholder inicial) ----------
 function TelaPainelMedicamentos({ onVoltar, estoques, historicoPorEstoque }) {
-  // Ordem cronológica (mais antigo primeiro) de cada setor, já que os registros são
-  // armazenados com o mais recente no topo. A matriz usa a ordem do teste, não a data.
-  const acuraciasOrdenadas = estoques.map((e) => {
-    const lista = (historicoPorEstoque[e.id]?.acuracias || []).slice().reverse();
-    return { estoque: e, testes: lista };
+  // Dados: ordem cronológica por setor (mais antigo primeiro)
+  const dadosPorSetor = estoques.map((e) => {
+    const lista = (historicoPorEstoque[e.id]?.verificacoes || []).slice().reverse();
+    const inventarios = (historicoPorEstoque[e.id]?.inventarios || []).slice().reverse();
+    return { estoque: e, verificacoes: lista, inventarios };
   });
 
-  const maxTestes = Math.max(0, ...acuraciasOrdenadas.map((a) => a.testes.length));
-  const colunas = Array.from({ length: maxTestes }, (_, i) => i);
+  const maxVerif = Math.max(0, ...dadosPorSetor.map((d) => d.verificacoes.length));
+  const colunas = Array.from({ length: maxVerif }, (_, i) => i);
 
-  function ordinal(n) {
-    return `${n + 1}º`;
+  // Média dos últimos 3 testes por setor
+  function mediaUltimos3(verificacoes) {
+    if (!verificacoes.length) return null;
+    const ult = verificacoes.slice(-3);
+    return Math.round((ult.reduce((s, v) => s + v.percentual, 0) / ult.length) * 10) / 10;
+  }
+
+  function statusSetor(media) {
+    if (media === null) return null;
+    if (media >= 95) return { label: "META", cor: "#00952A", bg: "#E8F5E9" };
+    if (media >= 80) return { label: "ATENÇÃO", cor: "#FF6700", bg: "#FFF3E0" };
+    return { label: "CRÍTICO", cor: "#ED282C", bg: "#FFEBEE" };
+  }
+
+  function periodicidade(media) {
+    if (media === null) return "—";
+    if (media >= 95) return "Trimestral";
+    if (media >= 80) return "Bimestral";
+    return "Mensal";
+  }
+
+  function ultimoInventarioLabel(inventarios, maxVerif) {
+    if (!inventarios.length) return "—";
+    // Qual número de verificação é o mais próximo ao último inventário?
+    return `${inventarios.length}º inventário`;
+  }
+
+  // SVG do gráfico de linhas com faixas
+  const W = 680, H = 320;
+  const mg = { top: 30, right: 20, bottom: 50, left: 52 };
+  const iW = W - mg.left - mg.right;
+  const iH = H - mg.top - mg.bottom;
+  const yMin = 60, yMax = 100;
+  const xFn = (i) => mg.left + (maxVerif > 1 ? (i / (maxVerif - 1)) * iW : iW / 2);
+  const yFn = (v) => mg.top + iH - ((v - yMin) / (yMax - yMin)) * iH;
+
+  // Cores por setor (paleta GovPE)
+  const CORES_SETOR = ["#0C2856","#ED282C","#4AE23D","#4400FF","#00B7FF","#FF6700","#FFCE00"];
+
+  // Quais verificações coincidem com inventários (simplificado: por índice)
+  function inventariosNoGrafico(dadoSetor) {
+    const set = new Set();
+    dadoSetor.inventarios.forEach((inv, i) => { if (i < maxVerif) set.add(i); });
+    return set;
   }
 
   return (
-    <div className="min-h-screen bg-[#F4F7FA] text-[#1C1A17]" style={{ fontFamily: "'Fraunces', Georgia, serif" }}>
-      <FontesGlobais />
+    <TelaLayout>
       <BarraTopo titulo="Painel de acompanhamento" onVoltar={onVoltar} produto="Medicamentos" />
 
-      <main className="max-w-5xl mx-auto px-6 py-10">
-        <section className="bg-white border border-[#E2E8F0] rounded-xl">
-          <div className="border-b-2 border-[#E2E8F0] px-6 py-3 flex items-center justify-between flex-wrap gap-3">
-            <div className="flex items-center gap-2">
-              <BarChart3 size={16} />
-              <h2 className="font-ui text-sm font-semibold uppercase tracking-wide">Acurácia por setor — ordem dos testes</h2>
+      <main className="max-w-6xl mx-auto px-4 py-8 space-y-6">
+        {/* Gráfico principal */}
+        <div className="bg-white rounded-2xl border border-[#E2E8F0] overflow-hidden" style={{ boxShadow: "0 2px 16px rgba(12,40,86,0.06)" }}>
+          <div className="px-6 py-4 border-b border-[#E2E8F0]">
+            <div className="flex items-center gap-2 mb-1">
+              <BarChart3 size={18} style={{ color: "#0C2856" }} />
+              <h2 className="font-display text-base font-bold" style={{ color: "#0C2856" }}>
+                Acurácia (verificações) × Inventários realizados
+              </h2>
             </div>
-            <p className="font-mono-label text-[11px] text-[#6B6357]">
-              Meta: <span className="font-semibold text-[#1C1A17]">{META_ACURACIA}%</span> · Crítico abaixo de <span className="font-semibold text-[#A13D2B]">{LIMITE_CRITICO_ACURACIA}%</span>
+            <p className="font-ui text-xs" style={{ color: "#6B7A8D" }}>
+              Evolução da acurácia por setor e momentos dos inventários
             </p>
           </div>
 
-          {maxTestes === 0 ? (
-            <p className="font-ui text-sm text-[#6B6357] p-6">
-              Nenhum teste de acurácia registrado ainda. Os resultados aparecem aqui na ordem em que forem feitos.
-            </p>
-          ) : (
-            <div className="overflow-x-auto p-6">
-              <table className="w-full text-sm font-ui min-w-[640px]">
-                <thead>
-                  <tr className="border-b border-[#1C3A5A]/20 bg-[#1C3A5A] text-white">
-                    <th className="text-left font-mono-label text-[11px] uppercase tracking-wide px-4 py-3 sticky left-0 bg-[#1C1A17]">Setor</th>
-                    {colunas.map((i) => (
-                      <th key={i} className="text-center font-mono-label text-[11px] uppercase tracking-wide px-3 py-3 whitespace-nowrap">
-                        {ordinal(i)} teste
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {acuraciasOrdenadas.map(({ estoque, testes }) => (
-                    <tr key={estoque.id} className="border-b border-[#E2E8F0]">
-                      <td className="px-4 py-2.5 sticky left-0 bg-[#FAF7EF]">
-                        <span className="text-xs font-medium">{estoque.nome}</span>
-                      </td>
-                      {colunas.map((i) => {
-                        const teste = testes[i];
-                        if (!teste) {
-                          return <td key={i} className="text-center px-3 py-2.5 text-[#6B6357]">—</td>;
-                        }
-                        const critico = teste.percentual < LIMITE_CRITICO_ACURACIA;
-                        const ruim = teste.percentual < META_ACURACIA;
-                        return (
-                          <td key={i} className="text-center px-3 py-2.5">
-                            <span className="font-mono-label text-xs font-semibold inline-flex items-center gap-1" style={{ color: ruim ? "#A13D2B" : "#1F5A4A" }}>
-                              {critico && <AlertTriangle size={11} />}
-                              {teste.percentual}%
-                            </span>
-                          </td>
-                        );
-                      })}
-                    </tr>
+          <div className="flex flex-col lg:flex-row">
+            {/* Gráfico SVG */}
+            <div className="flex-1 p-4 overflow-x-auto">
+              {maxVerif === 0 ? (
+                <p className="font-ui text-sm text-center py-10" style={{ color: "#6B7A8D" }}>
+                  Nenhuma verificação de acurácia registrada ainda.
+                </p>
+              ) : (
+                <svg viewBox={`0 0 ${W} ${H}`} className="w-full min-w-[520px]">
+                  {/* Faixa META (verde) ≥95% */}
+                  <rect x={mg.left} y={yFn(100)} width={iW} height={yFn(95) - yFn(100)} fill="#4AE23D" fillOpacity="0.12"/>
+                  <text x={mg.left + 4} y={yFn(100) + 12} fontSize="9" fill="#00952A" fontFamily="monospace" fontWeight="700">META ≥ 95%</text>
+                  {/* Linha META */}
+                  <line x1={mg.left} x2={mg.left + iW} y1={yFn(95)} y2={yFn(95)} stroke="#00952A" strokeWidth="1.5" strokeDasharray="5 3"/>
+                  <text x={mg.left + iW} y={yFn(95) - 5} textAnchor="end" fontSize="9" fill="#00952A" fontFamily="monospace" fontWeight="600">META ≥ 95%</text>
+
+                  {/* Faixa ATENÇÃO (amarelo) 80-95% */}
+                  <rect x={mg.left} y={yFn(95)} width={iW} height={yFn(80) - yFn(95)} fill="#FFCE00" fillOpacity="0.18"/>
+                  <text x={mg.left + 4} y={yFn(95) + 14} fontSize="9" fill="#FF6700" fontFamily="monospace" fontWeight="700">⚠ ATENÇÃO 80–95%</text>
+
+                  {/* Linha ATENÇÃO */}
+                  <line x1={mg.left} x2={mg.left + iW} y1={yFn(80)} y2={yFn(80)} stroke="#FF6700" strokeWidth="1.5" strokeDasharray="5 3"/>
+                  <text x={mg.left + iW} y={yFn(80) - 5} textAnchor="end" fontSize="9" fill="#FF6700" fontFamily="monospace" fontWeight="600">ATENÇÃO 80–95%</text>
+
+                  {/* Faixa CRÍTICO (vermelha) <80% */}
+                  <rect x={mg.left} y={yFn(80)} width={iW} height={yFn(yMin) - yFn(80)} fill="#ED282C" fillOpacity="0.09"/>
+                  <text x={mg.left + 4} y={yFn(80) + 14} fontSize="9" fill="#ED282C" fontFamily="monospace" fontWeight="700">CRÍTICO &lt; 80%</text>
+
+                  {/* Grid e eixo Y */}
+                  {[60,70,80,90,95,100].map(v => (
+                    <g key={v}>
+                      <line x1={mg.left} x2={mg.left + iW} y1={yFn(v)} y2={yFn(v)} stroke="#0C2856" strokeOpacity="0.05"/>
+                      <text x={mg.left - 6} y={yFn(v)} textAnchor="end" dominantBaseline="middle" fontSize="10" fill="#6B7A8D" fontFamily="monospace">{v}%</text>
+                    </g>
                   ))}
-                </tbody>
-              </table>
+
+                  {/* Eixo X */}
+                  {colunas.map(i => (
+                    <text key={i} x={xFn(i)} y={H - mg.bottom + 16} textAnchor="middle" fontSize="10" fill="#6B7A8D" fontFamily="monospace">
+                      {i + 1}ª verif.
+                    </text>
+                  ))}
+
+                  {/* Linhas por setor */}
+                  {dadosPorSetor.map(({ estoque, verificacoes }, si) => {
+                    if (!verificacoes.length) return null;
+                    const cor = CORES_SETOR[si % CORES_SETOR.length];
+                    const pts = verificacoes.map((v, i) => `${xFn(i)},${yFn(v.percentual)}`).join(" ");
+                    return (
+                      <g key={estoque.id}>
+                        <polyline points={pts} fill="none" stroke={cor} strokeWidth="2" strokeOpacity="0.7"/>
+                        {verificacoes.map((v, i) => (
+                          <circle key={i} cx={xFn(i)} cy={yFn(v.percentual)} r="5" fill={cor} stroke="white" strokeWidth="1.5"/>
+                        ))}
+                      </g>
+                    );
+                  })}
+
+                  {/* Ícones de inventário no eixo X (simplificado) */}
+                  {dadosPorSetor[0]?.inventarios.slice(0, maxVerif).map((_, i) => (
+                    <text key={i} x={xFn(i)} y={H - mg.bottom + 34} textAnchor="middle" fontSize="13" fill="#00952A">📋</text>
+                  ))}
+                </svg>
+              )}
+
+              {/* Legenda */}
+              <div className="flex flex-wrap gap-x-4 gap-y-1 px-2 pb-2">
+                {dadosPorSetor.map(({ estoque }, si) => (
+                  <div key={estoque.id} className="flex items-center gap-1.5">
+                    <div className="w-5 h-0.5" style={{ backgroundColor: CORES_SETOR[si % CORES_SETOR.length] }}/>
+                    <span className="font-ui text-xs" style={{ color: "#4A5568" }}>{estoque.nome}</span>
+                  </div>
+                ))}
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs">📋</span>
+                  <span className="font-ui text-xs" style={{ color: "#00952A" }}>Inventário realizado (ajuste do sistema)</span>
+                </div>
+              </div>
             </div>
-          )}
-        </section>
 
-        {/* Inventários realizados: 1 quadradinho por inventário registrado, por setor */}
-        <section className="bg-white border border-[#E2E8F0] rounded-xl mt-8">
-          <div className="border-b-2 border-[#E2E8F0] px-6 py-3 flex items-center gap-2">
-            <ClipboardList size={16} />
-            <h2 className="font-ui text-sm font-semibold uppercase tracking-wide">Inventários realizados por setor</h2>
+            {/* Painel lateral direito: critérios */}
+            <div className="lg:w-72 border-t lg:border-t-0 lg:border-l border-[#E2E8F0] p-5 space-y-4">
+              <div>
+                <p className="font-mono-label text-[11px] uppercase tracking-wider font-bold mb-3" style={{ color: "#0C2856" }}>
+                  Critérios de avaliação
+                </p>
+                {[
+                  { label: "META", desc: "Acurácia ≥ 95%\nSistema altamente confiável.", cor: "#00952A", bg: "#E8F5E9", icon: "✓" },
+                  { label: "ATENÇÃO", desc: "80% ≤ Acurácia < 95%\nRequer monitoramento e ações corretivas.", cor: "#FF6700", bg: "#FFF3E0", icon: "⚠" },
+                  { label: "CRÍTICO", desc: "Acurácia < 80%\nSistema não confiável.\nNecessidade de inventários mais frequentes.", cor: "#ED282C", bg: "#FFEBEE", icon: "⊗" },
+                ].map(({ label, desc, cor, bg, icon }) => (
+                  <div key={label} className="rounded-xl p-3 mb-2" style={{ backgroundColor: bg, border: `1px solid ${cor}30` }}>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-bold text-sm" style={{ color: cor }}>{icon} {label}</span>
+                    </div>
+                    <p className="font-ui text-xs whitespace-pre-line" style={{ color: "#4A5568" }}>{desc}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Periodicidade sugerida */}
+              <div>
+                <p className="font-mono-label text-[11px] uppercase tracking-wider font-bold mb-2" style={{ color: "#0C2856" }}>
+                  Sugestão de periodicidade do inventário
+                </p>
+                <table className="w-full text-xs font-ui rounded-lg overflow-hidden">
+                  <thead>
+                    <tr style={{ backgroundColor: "#F4F7FA" }}>
+                      <th className="text-left px-2 py-1.5 font-semibold" style={{ color: "#0C2856" }}>Média</th>
+                      <th className="text-left px-2 py-1.5 font-semibold" style={{ color: "#0C2856" }}>Periodicidade</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      { range: "≥ 95%", periodo: "Trimestral", cor: "#00952A", bg: "#E8F5E9" },
+                      { range: "80% a < 95%", periodo: "Bimestral", cor: "#FF6700", bg: "#FFF3E0" },
+                      { range: "< 80%", periodo: "Mensal", cor: "#ED282C", bg: "#FFEBEE" },
+                    ].map(({ range, periodo, cor, bg }) => (
+                      <tr key={range} style={{ backgroundColor: bg }}>
+                        <td className="px-2 py-1.5 font-medium" style={{ color: cor }}>{range}</td>
+                        <td className="px-2 py-1.5 font-semibold" style={{ color: cor }}>{periodo}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <p className="font-ui text-[10px] mt-2" style={{ color: "#6B7A8D" }}>
+                  ⓘ A sugestão considera a média dos últimos 3 testes e a regularidade dos inventários realizados.
+                </p>
+              </div>
+            </div>
           </div>
+        </div>
 
+        {/* Resumo por setor */}
+        <div className="bg-white rounded-2xl border border-[#E2E8F0] overflow-hidden" style={{ boxShadow: "0 2px 16px rgba(12,40,86,0.06)" }}>
+          <div className="px-6 py-4 border-b border-[#E2E8F0] flex items-center gap-2">
+            <ClipboardList size={16} style={{ color: "#0C2856" }} />
+            <h2 className="font-display text-base font-bold" style={{ color: "#0C2856" }}>Resumo por setor</h2>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm font-ui min-w-[640px]">
+              <thead>
+                <tr style={{ backgroundColor: "#F4F7FA" }}>
+                  {["Setor","Média acurácia (últimos 3)","Status","Último inventário","Periodicidade sugerida"].map(h => (
+                    <th key={h} className="text-left px-4 py-3 font-mono-label text-[11px] uppercase tracking-wide" style={{ color: "#6B7A8D" }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {dadosPorSetor.map(({ estoque, verificacoes, inventarios }, si) => {
+                  const media = mediaUltimos3(verificacoes);
+                  const st = statusSetor(media);
+                  const cor = CORES_SETOR[si % CORES_SETOR.length];
+                  return (
+                    <tr key={estoque.id} className="border-b border-[#E2E8F0]">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: cor }}/>
+                          <span className="font-medium text-sm" style={{ color: "#1C1A17" }}>{estoque.nome}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 font-mono-label text-sm font-semibold" style={{ color: st?.cor || "#6B7A8D" }}>
+                        {media !== null ? `${media}%` : "—"}
+                      </td>
+                      <td className="px-4 py-3">
+                        {st && (
+                          <span className="font-mono-label text-[11px] font-bold px-2 py-1 rounded-full" style={{ backgroundColor: st.bg, color: st.cor }}>
+                            {st.label}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 font-ui text-xs" style={{ color: "#4A5568" }}>
+                        {inventarios.length ? `${inventarios.length}º inventário` : "—"}
+                      </td>
+                      <td className="px-4 py-3 font-ui text-xs font-semibold" style={{ color: st?.cor || "#6B7A8D" }}>
+                        {media !== null ? periodicidade(media) : "—"}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Como decidir a periodicidade */}
+        <div className="bg-white rounded-2xl border border-[#E2E8F0] p-6" style={{ boxShadow: "0 2px 16px rgba(12,40,86,0.06)" }}>
+          <div className="flex items-center gap-2 mb-4">
+            <span className="text-lg">💡</span>
+            <h3 className="font-display text-base font-bold" style={{ color: "#0C2856" }}>Como decidir a periodicidade?</h3>
+          </div>
+          <div className="grid sm:grid-cols-2 gap-3">
+            {[
+              "Analise a média de acurácia dos últimos 3 testes.",
+              "Verifique a tendência: crescente indica melhoria; decrescente requer atenção redobrada.",
+              "Considere o tempo desde o último inventário e a criticidade do setor.",
+              "Defina a periodicidade conforme o critério e monitore continuamente.",
+            ].map((txt, i) => (
+              <div key={i} className="flex items-start gap-2">
+                <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5" style={{ backgroundColor: "#E8F5E9" }}>
+                  <Check size={12} style={{ color: "#00952A" }}/>
+                </div>
+                <p className="font-ui text-sm" style={{ color: "#4A5568" }}>{txt}</p>
+              </div>
+            ))}
+          </div>
+          <p className="font-ui text-xs mt-4 pt-3 border-t border-[#E2E8F0]" style={{ color: "#6B7A8D" }}>
+            ⓘ Inventário ajusta o sistema (torna os dados confiáveis). Verificações de acurácia validam a confiabilidade entre inventários.
+          </p>
+        </div>
+
+        {/* Inventários realizados */}
+        <div className="bg-white rounded-2xl border border-[#E2E8F0] overflow-hidden" style={{ boxShadow: "0 2px 16px rgba(12,40,86,0.06)" }}>
+          <div className="px-6 py-4 border-b border-[#E2E8F0] flex items-center gap-2">
+            <ClipboardList size={16} style={{ color: "#0C2856" }} />
+            <h2 className="font-display text-base font-bold" style={{ color: "#0C2856" }}>Inventários realizados por setor</h2>
+          </div>
           <div className="p-6 space-y-4">
             {estoques
-              .map((e) => ({ estoque: e, qtdInventarios: (historicoPorEstoque[e.id]?.inventarios || []).length }))
-              .sort((a, b) => b.qtdInventarios - a.qtdInventarios)
-              .map(({ estoque: e, qtdInventarios }) => {
-              return (
-                <div key={e.id} className="flex items-center gap-4 flex-wrap">
-                  <span className="font-ui text-sm font-medium min-w-[260px]">{e.nome}</span>
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    {qtdInventarios === 0 ? (
-                      <span className="font-mono-label text-xs text-[#6B6357]">Nenhum inventário registrado ainda</span>
+              .map((e) => {
+                const invs = (historicoPorEstoque[e.id]?.inventarios || []).slice().sort((a, b) => new Date(a.data) - new Date(b.data));
+                const qtd = invs.length;
+                // Período de referência: 7 meses = ~210 dias (período do histórico mock)
+                // Média = período ÷ quantidade → proporcional entre setores
+                const PERIODO_REFERENCIA_DIAS = 7 * 30;
+                let mediaDias = qtd > 0 ? Math.round(PERIODO_REFERENCIA_DIAS / qtd) : null;
+                // Periodicidade sugerida baseada na acurácia média
+                const verificacoes = (historicoPorEstoque[e.id]?.verificacoes || []);
+                const ult3 = verificacoes.slice(-3);
+                const media = ult3.length ? Math.round(ult3.reduce((s,v) => s+v.percentual, 0) / ult3.length * 10) / 10 : null;
+                const periodoSugerido = media === null ? null : media >= 95 ? { label: "Trimestral", dias: 90 } : media >= 80 ? { label: "Bimestral", dias: 60 } : { label: "Mensal", dias: 30 };
+                const corPeriodo = periodoSugerido && mediaDias !== null
+                  ? mediaDias <= periodoSugerido.dias * 1.1 ? "#00952A" : "#ED282C"
+                  : "#6B7A8D";
+                return { estoque: e, qtd, mediaDias, periodoSugerido, corPeriodo };
+              })
+              .sort((a, b) => b.qtd - a.qtd)
+              .map(({ estoque: e, qtd, mediaDias, periodoSugerido, corPeriodo }, si) => (
+                <div key={e.id} className="flex items-start gap-4 flex-wrap pb-3 border-b border-[#E2E8F0] last:border-0 last:pb-0">
+                  {/* Nome */}
+                  <span className="font-ui text-sm font-medium min-w-[200px]" style={{ color: "#0C2856" }}>{e.nome}</span>
+
+                  {/* Quadradinhos */}
+                  <div className="flex items-center gap-1 flex-wrap flex-1">
+                    {qtd === 0 ? (
+                      <span className="font-mono-label text-xs" style={{ color: "#6B7A8D" }}>Nenhum inventário ainda</span>
                     ) : (
-                      Array.from({ length: qtdInventarios }, (_, i) => (
-                        <span
-                          key={i}
-                          className="inline-block"
-                          style={{ width: 14, height: 14, backgroundColor: "#8B7355" }}
-                          title={`Inventário ${i + 1}`}
-                        />
+                      Array.from({ length: qtd }, (_, i) => (
+                        <span key={i} className="inline-block rounded-sm" style={{ width: 14, height: 14, backgroundColor: CORES_SETOR[si % CORES_SETOR.length] }} title={`Inventário ${i + 1}`}/>
                       ))
                     )}
-                    <span className="font-mono-label text-[11px] text-[#6B6357] ml-2">
-                      {qtdInventarios > 0 && `${qtdInventarios} inventário${qtdInventarios > 1 ? "s" : ""}`}
-                    </span>
+                    {qtd > 0 && <span className="font-mono-label text-[11px] ml-1" style={{ color: "#6B7A8D" }}>{qtd} inv.</span>}
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
 
-        <p className="font-mono-label text-[10px] text-[#6B6357] mt-6 text-center">
-          Protótipo — histórico exibido reflete os testes registrados na tela de monitoramento, nesta sessão.
-        </p>
+                  {/* Média em dias + periodicidade */}
+                  {qtd > 0 && (
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <div className="text-right">
+                        <p className="font-mono-label text-[10px] uppercase tracking-wide" style={{ color: "#6B7A8D" }}>Periodicidade realizada</p>
+                        <p className="font-mono-label text-sm font-semibold" style={{ color: corPeriodo }}>
+                          {mediaDias !== null ? `a cada ~${mediaDias} dias` : "—"}
+                        </p>
+                      </div>
+                      {periodoSugerido && (
+                        <>
+                          <div className="text-[#CBD5E1]">→</div>
+                          <div className="text-right">
+                            <p className="font-mono-label text-[10px] uppercase tracking-wide" style={{ color: "#6B7A8D" }}>Sugestão</p>
+                            <p className="font-mono-label text-sm font-semibold" style={{ color: corPeriodo }}>
+                              {periodoSugerido.label} (≤{periodoSugerido.dias}d)
+                            </p>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+          </div>
+        </div>
       </main>
-    </div>
+    </TelaLayout>
   );
 }
 
-// ---------- App raiz ----------
 export default function App() {
   const [tela, setTela] = useState("selecaoProduto");
 
