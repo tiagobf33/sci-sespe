@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
 import {
-  Check, X, MinusCircle, ChevronDown, FileText, Building2,
+  Check, X, ChevronDown, FileText, Building2,
   ClipboardList, BarChart3, ArrowLeft, AlertTriangle,
   Lock, TrendingDown, TrendingUp, Plus, Pencil,
   UtensilsCrossed, Pill,
@@ -100,7 +100,7 @@ const ARTIGOS = [
 
 ];
 
-const STATUS = { CONFORME: "conforme", NAO_CONFORME: "nao_conforme", NA: "na" };
+const STATUS = { CONFORME: "conforme", NAO_CONFORME: "nao_conforme" };
 
 const MESES = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -215,8 +215,7 @@ function statusConfig(status) {
       return { label: "Conforme", icon: Check, bg: "bg-green-600", text: "text-green-700", hex: "#4AE23D", bgHex: "#4AE23D", textHex: "#fff" };
     case STATUS.NAO_CONFORME:
       return { label: "Não conforme", icon: X, bg: "bg-[#ED282C]", text: "text-[#ED282C]", hex: "#ED282C", bgHex: "#ED282C", textHex: "#fff" };
-    case STATUS.NA:
-      return { label: "Não se aplica", icon: MinusCircle, bg: "bg-[#FF6700]", text: "text-[#FF6700]", hex: "#6B7A8D", bgHex: "#E2E8F0", textHex: "#4A5568" };
+
     default:
       return null;
   }
@@ -313,7 +312,7 @@ function gerarHistorico(numMeses = 7) {
         razaoAcomp,
         statusItens: ARTIGOS.reduce((acc, item) => {
           const r = rand();
-          acc[item.art] = r > 0.85 ? STATUS.NAO_CONFORME : r > 0.78 ? STATUS.NA : STATUS.CONFORME;
+          acc[item.art] = r > 0.85 ? STATUS.NAO_CONFORME : STATUS.CONFORME;
           return acc;
         }, {}),
       });
@@ -349,7 +348,7 @@ function gerarHistoricoICA(historicoChecklist) {
       ica: calcularICA(m.statusItens),
       conforme: Object.values(m.statusItens).filter((s) => s === STATUS.CONFORME).length,
       naoConforme: Object.values(m.statusItens).filter((s) => s === STATUS.NAO_CONFORME).length,
-      naoAplica: Object.values(m.statusItens).filter((s) => s === STATUS.NA).length,
+      naoAplica: 0,
     }));
   });
   return resultado;
@@ -1746,7 +1745,7 @@ function AbaChecklist() {
                   </div>
 
                   <div className="flex md:flex-col gap-2 md:w-40">
-                    {[STATUS.CONFORME, STATUS.NAO_CONFORME, STATUS.NA].map((s) => {
+                    {[STATUS.CONFORME, STATUS.NAO_CONFORME].map((s) => {
                       const cfg = statusConfig(s);
                       const Icon = cfg.icon;
                       const active = status === s;
@@ -1781,7 +1780,7 @@ function AbaChecklist() {
               <p className="text-xl text-[#E29C8A]">{contagem.nao_conforme}</p>
             </div>
             <div>
-              <p className="text-[#EDE7D9]/50 uppercase tracking-wider mb-1">N/A</p>
+              
               <p className="text-xl text-[#C9C2B2]">{contagem.na}</p>
             </div>
           </div>
@@ -1911,7 +1910,7 @@ function MatrizUltimoMes() {
             Matriz de pontos de controle — todos os hospitais
           </h2>
         </div>
-        <p className="font-mono-label text-[11px] text-[#6B6357]">Conforme · Não conforme · N/A</p>
+        <p className="font-mono-label text-[11px] text-[#6B6357]">Conforme · Não conforme</p>
       </div>
 
       <div className="overflow-x-auto p-6 pt-4">
@@ -2329,7 +2328,7 @@ function BlocoGraficoICA({ hospital, hospitaisFiltrados, ponto, onSelecionarPont
             <span className="font-mono-label text-sm font-semibold text-[#1C1A17]">{dado.ica}%</span>
           </div>
           <p className="font-mono-label text-[11px] text-[#6B6357]">
-            Conforme: {dado.conforme} · Não conforme: {dado.naoConforme} · N/A (excluído do cálculo): {dado.naoAplica}
+            Conforme: {dado.conforme} · Não conforme: {dado.naoConforme}
           </p>
         </div>
       ) : (
