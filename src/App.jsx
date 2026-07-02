@@ -2306,12 +2306,15 @@ function BlocoGraficoICA({ hospital, hospitaisFiltrados, ponto, onSelecionarPont
           pontoSelecionado={ponto}
           onSelecionarPonto={onSelecionarPonto}
           campoValor={(d) => d.ica}
-          yMin={0}
+          yMin={40}
           yMax={100}
-          gridValues={[0, 25, 50, 75, 100]}
+          gridValues={[60, 70, 80, 90, 100]}
           formatarTick={(v) => `${v}%`}
           ariaLabel="Série histórica do Índice de Controle de Alimentação"
-          apenasPonotos={false}
+          zonaOtima={{ min: 80, max: 100, label: "Conforme ≥ 80%" }}
+          zonaIntermediaria={{ min: 60, max: 80, label: "Atenção 60–79%" }}
+          zonaAlerta={{ min: 40, max: 60, label: "Crítico < 60%" }}
+          apenasPonotos={true}
         />
         <LegendaHospitais hospitaisFiltrados={hospitaisFiltrados} />
       </div>
@@ -2374,7 +2377,7 @@ function BlocoGraficoBiometria({ hospital, hospitaisFiltrados, ponto, onSelecion
           zonaOtima={{ min: 90, max: 100, label: "Conforme ≥ 90%" }}
           zonaIntermediaria={{ min: 70, max: 90, label: "Atenção 70–89%" }}
           zonaAlerta={{ min: 65, max: 70, label: "Crítico < 70%" }}
-          apenasPonotos={false}
+          apenasPonotos={true}
         />
         <LegendaHospitais hospitaisFiltrados={hospitaisFiltrados} corDestaque="#ED282C" labelDestaque="ponto abaixo da meta" />
       </div>
