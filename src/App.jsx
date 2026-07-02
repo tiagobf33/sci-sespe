@@ -45,6 +45,20 @@ const ARTIGOS = [
     metrico: true,
   },
   {
+    art: "Indicador",
+    titulo: "Proporção lanche/paciente (média diária)",
+    texto:
+      "Informar a média diária de lanches fornecidos e a média diária de pacientes internados no período. O lanche destina-se exclusivamente ao paciente — acompanhante não recebe. A razão (lanches ÷ pacientes) deve ser igual a 1,0. Acima de 1,0 é não conforme; acima de 1,1 exige justificativa obrigatória.",
+    metricoLanche: true,
+  },
+  {
+    art: "Indicador 2",
+    titulo: "Proporção refeições de acompanhante por paciente (média diária)",
+    texto:
+      "Cada paciente tem direito a 1 acompanhante com 3 refeições/dia. A razão ideal é: média diária de refeições de acompanhante ÷ média diária de pacientes = 3,0. Acima de 3,0 indica que mais pessoas estão se alimentando do que o previsto ou que acompanhantes estão recebendo mais de 3 refeições por dia. Acima de 3,3 exige justificativa obrigatória.",
+    metricoAcomp: true,
+  },
+  {
     art: "Art. 9º",
     titulo: "Escalas de trabalho",
     texto:
@@ -204,12 +218,16 @@ function percentualBadge(valor, meta) {
   );
 }
 
-function mensagemPendencia({ progresso, responsavel, percentualPreenchido, justificativaBiometriaCompleta }) {
+function mensagemPendencia({ progresso, responsavel, percentualPreenchido, justificativaBiometriaCompleta, lanchePreenchido, justificativaLancheCompleta, acompPreenchido, justificativaAcompCompleta }) {
   const pendencias = [];
   if (progresso.respondidos < progresso.total) pendencias.push("todos os itens");
   if (!responsavel.trim()) pendencias.push("nome do responsável");
   if (!percentualPreenchido) pendencias.push("percentual de biometria");
   if (!justificativaBiometriaCompleta) pendencias.push("motivo e ações pactuadas do indicador de biometria (percentual crítico)");
+  if (!lanchePreenchido) pendencias.push("médias diárias do indicador de proporção lanche/paciente");
+  if (!justificativaLancheCompleta) pendencias.push("justificativa obrigatória do indicador de proporção lanche/paciente (razão acima de 1,1)");
+  if (!acompPreenchido) pendencias.push("médias diárias do indicador de refeições de acompanhante por paciente");
+  if (!justificativaAcompCompleta) pendencias.push("justificativa obrigatória do indicador de refeições de acompanhante (razão acima de 3,3)");
   return "Falta preencher: " + pendencias.join(", ");
 }
 
@@ -243,15 +261,23 @@ function gerarHistorico(numMeses = 7) {
   const historico = {};
   HOSPITAIS.forEach((h, hIdx) => {
     const rand = seededRandom(1000 + hIdx * 37);
+    const randL = seededRandom(2200 + hIdx * 53); // seed separado para indicadores
     const meses = [];
     // base de comportamento distinta por hospital, pra ficar visualmente legível
     const baseline = [94, 91, 88, 96, 85, 92][hIdx] ?? 90;
+    // baselines dos indicadores de proporção: alguns hospitais têm tendência a distorção
+    const baselineLanche = [0.98, 1.05, 1.12, 0.97, 1.08, 1.01][hIdx] ?? 1.0;
+    const baselineAcomp  = [2.95, 3.15, 3.40, 2.90, 3.25, 3.05][hIdx] ?? 3.0;
     for (let i = numMeses - 1; i >= 0; i--) {
       const d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
       const variacao = (rand() - 0.5) * 10;
       let pct = Math.round((baseline + variacao) * 10) / 10;
       pct = Math.max(70, Math.min(99.5, pct));
       const abaixo = pct < META_BIOMETRIA;
+      const varL = (randL() - 0.5) * 0.14;
+      const varA = (randL() - 0.5) * 0.40;
+      const razaoLanche = Math.round((baselineLanche + varL) * 100) / 100;
+      const razaoAcomp  = Math.round((baselineAcomp  + varA) * 100) / 100;
       meses.push({
         mesIndex: d.getMonth(),
         ano: d.getFullYear(),
@@ -261,6 +287,8 @@ function gerarHistorico(numMeses = 7) {
         motivo: abaixo ? MOTIVOS_EXEMPLO[Math.floor(rand() * MOTIVOS_EXEMPLO.length)] : "",
         acoes: abaixo ? ACOES_EXEMPLO[Math.floor(rand() * ACOES_EXEMPLO.length)] : "",
         responsavel: "Equipe UCI " + h.sigla,
+        razaoLanche,
+        razaoAcomp,
         statusItens: ARTIGOS.reduce((acc, item) => {
           const r = rand();
           acc[item.art] = r > 0.85 ? STATUS.NAO_CONFORME : r > 0.78 ? STATUS.NA : STATUS.CONFORME;
@@ -557,109 +585,306 @@ function GraficoSerieHistorica({
 // ---------- Tela: Seleção de produto ----------
 function TelaSelecaoProduto({ onIrPara }) {
   return (
-    <div className="min-h-screen bg-[#EDE7D9] text-[#1C1A17] flex flex-col" style={{ fontFamily: "'Fraunces', Georgia, serif" }}>
+    <div className="min-h-screen flex flex-col text-[#1C1A17]" style={{ fontFamily: "'Fraunces', Georgia, serif", backgroundColor: "#F4F7FA" }}>
       <FontesGlobais />
-      <header className="border-b-2 border-[#1C1A17] bg-[#1C1A17] text-[#EDE7D9]">
-        <div className="max-w-3xl mx-auto px-6 py-3">
-          <LogosCabecalho alturaPE={38} alturaSCI={34} />
-          <p className="font-display text-sm font-medium leading-tight mt-2 text-center">Controladoria-Geral do Estado de Pernambuco</p>
-          <p className="font-mono-label text-[10px] text-[#EDE7D9]/60 tracking-wide mt-0.5 uppercase text-center">
-            Unidades de Controle Interno — SES-PE
-          </p>
+
+      {/* Elementos decorativos de fundo */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 0 }}>
+        {/* Pontos decorativos canto superior direito */}
+        <svg width="160" height="160" viewBox="0 0 160 160" className="absolute top-0 right-0 opacity-20">
+          {Array.from({ length: 6 }, (_, r) => Array.from({ length: 6 }, (_, c) => (
+            <circle key={`${r}-${c}`} cx={16 + c * 24} cy={16 + r * 24} r="2.5" fill="#3D5A73" />
+          )))}
+        </svg>
+        {/* Pontos decorativos canto inferior esquerdo */}
+        <svg width="160" height="160" viewBox="0 0 160 160" className="absolute bottom-0 left-0 opacity-20">
+          {Array.from({ length: 6 }, (_, r) => Array.from({ length: 6 }, (_, c) => (
+            <circle key={`${r}-${c}`} cx={16 + c * 24} cy={16 + r * 24} r="2.5" fill="#1F5A4A" />
+          )))}
+        </svg>
+        {/* Ícone gráfico inferior esquerdo */}
+        <div className="absolute bottom-32 left-8 opacity-10">
+          <BarChart3 size={80} style={{ color: "#3D5A73" }} />
         </div>
-      </header>
+        {/* Ícone calendário inferior direito */}
+        <div className="absolute bottom-28 right-10 opacity-10">
+          <FileText size={72} style={{ color: "#1F5A4A" }} />
+        </div>
+      </div>
 
-      <main className="flex-1 flex items-center justify-center px-6 py-6">
-        <div className="max-w-2xl w-full">
-          <p className="font-mono-label text-[10px] uppercase tracking-wider text-[#6B6357] mb-1 text-center">Qual área você deseja acompanhar?</p>
-          <h1 className="font-display text-xl font-medium mb-5 text-center">Selecione um produto</h1>
-
-          <div className="grid sm:grid-cols-2 gap-4">
-            <button
-              onClick={() => onIrPara("alimentacao")}
-              className="text-left bg-[#FAF7EF] p-4 transition-all group flex flex-col items-center text-center"
-              style={{ border: "2.5px solid #1F5A4A" }}
-              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#1F5A4A"; e.currentTarget.style.color = "#FAF7EF"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "#FAF7EF"; e.currentTarget.style.color = ""; }}
-            >
-              <div className="w-10 h-10 rounded-full flex items-center justify-center mb-2" style={{ backgroundColor: "#1F5A4A" }}>
-                <UtensilsCrossed size={18} className="text-[#FAF7EF]" />
-              </div>
-              <p className="font-display text-base font-medium mb-1">Alimentação hospitalar</p>
-              <p className="font-ui text-xs opacity-80 leading-snug">
-                Controle de acesso e faturamento, indicadores e economia de alimentação hospitalar.
-              </p>
-            </button>
-
-            <button
-              onClick={() => onIrPara("medicamentos")}
-              className="text-left bg-[#FAF7EF] p-4 transition-all group flex flex-col items-center text-center"
-              style={{ border: "2.5px solid #3D5A73" }}
-              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#3D5A73"; e.currentTarget.style.color = "#FAF7EF"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "#FAF7EF"; e.currentTarget.style.color = ""; }}
-            >
-              <div className="w-10 h-10 rounded-full flex items-center justify-center mb-2" style={{ backgroundColor: "#3D5A73" }}>
-                <Pill size={18} className="text-[#FAF7EF]" />
-              </div>
-              <p className="font-display text-base font-medium mb-1">Medicamentos</p>
-              <p className="font-ui text-xs opacity-80 leading-snug">
-                Inventários periódicos e testes de acurácia da curva ABC, por estoque.
-              </p>
-            </button>
+      <div className="relative flex flex-col flex-1" style={{ zIndex: 1 }}>
+        {/* Cabeçalho */}
+        <header className="pt-8 pb-4 px-6">
+          <div className="max-w-4xl mx-auto">
+            {/* Logos centralizadas */}
+            <div className="flex items-center justify-center gap-6 mb-5">
+              <img src={LOGO_PE_BASE64} alt="Governo de Pernambuco" style={{ height: 52 }} />
+              <div className="w-px self-stretch" style={{ backgroundColor: "#CBD5E1" }} />
+              <img src={LOGO_SCI_BASE64} alt="SCI — Sistema de Controle Interno" style={{ height: 46 }} />
+            </div>
+            {/* Título institucional */}
+            <p className="font-display text-xl font-semibold text-center" style={{ color: "#1C3A5A" }}>
+              Controladoria-Geral do Estado de Pernambuco
+            </p>
+            <p className="font-mono-label text-[11px] uppercase tracking-[0.18em] text-center mt-1" style={{ color: "#6B7A8D" }}>
+              Unidades de Controle Interno — SES-PE
+            </p>
           </div>
-        </div>
-      </main>
+        </header>
+
+        {/* Conteúdo principal */}
+        <main className="flex-1 px-6 py-6">
+          <div className="max-w-4xl mx-auto">
+            {/* Subtítulo + linha */}
+            <div className="text-center mb-7">
+              <p className="font-mono-label text-[11px] uppercase tracking-[0.2em] mb-3" style={{ color: "#6B7A8D" }}>
+                Qual área você deseja acompanhar?
+              </p>
+              <h1 className="font-display text-4xl font-bold mb-4" style={{ color: "#1C3A5A" }}>
+                Selecione um produto
+              </h1>
+            </div>
+
+            {/* Cards dos produtos */}
+            <div className="grid sm:grid-cols-2 gap-5 mb-8">
+
+              {/* Card Alimentação Hospitalar */}
+              <button
+                onClick={() => onIrPara("alimentacao")}
+                className="text-left rounded-2xl overflow-hidden transition-all hover:shadow-xl hover:-translate-y-1 group"
+                style={{ backgroundColor: "#ffffff", border: "1.5px solid #C8E6C9", boxShadow: "0 4px 20px rgba(31,90,74,0.08)" }}
+              >
+                {/* Área ilustrativa */}
+                <div className="relative h-44 flex items-end justify-center overflow-hidden"
+                  style={{ background: "linear-gradient(135deg, #E8F5E9 0%, #F1F8E9 60%, #E0F2F1 100%)" }}>
+                  {/* Onda decorativa no fundo */}
+                  <svg viewBox="0 0 400 80" className="absolute bottom-0 w-full" preserveAspectRatio="none">
+                    <path d="M0,40 Q100,10 200,40 T400,40 L400,80 L0,80 Z" fill="#1F5A4A" opacity="0.15" />
+                    <path d="M0,55 Q100,30 200,55 T400,55 L400,80 L0,80 Z" fill="#1F5A4A" opacity="0.25" />
+                  </svg>
+                  {/* Ilustração SVG: sino + prancheta */}
+                  <svg viewBox="0 0 220 140" className="absolute inset-0 w-full h-full" style={{ opacity: 0.9 }}>
+                    {/* Prancheta */}
+                    <rect x="30" y="20" width="80" height="100" rx="6" fill="#fff" stroke="#A5D6A7" strokeWidth="2"/>
+                    <rect x="55" y="12" width="30" height="16" rx="4" fill="#A5D6A7"/>
+                    <line x1="42" y1="50" x2="98" y2="50" stroke="#A5D6A7" strokeWidth="2"/>
+                    <line x1="42" y1="63" x2="98" y2="63" stroke="#A5D6A7" strokeWidth="2"/>
+                    <line x1="42" y1="76" x2="80" y2="76" stroke="#A5D6A7" strokeWidth="2"/>
+                    <circle cx="40" cy="50" r="4" fill="#1F5A4A"/>
+                    <polyline points="38,50 40,53 44,46" stroke="#fff" strokeWidth="1.5" fill="none"/>
+                    <circle cx="40" cy="63" r="4" fill="#1F5A4A"/>
+                    <polyline points="38,63 40,66 44,59" stroke="#fff" strokeWidth="1.5" fill="none"/>
+                    <circle cx="40" cy="76" r="4" fill="#A5D6A7"/>
+                    {/* Sino */}
+                    <ellipse cx="155" cy="95" rx="28" ry="8" fill="#1F5A4A" opacity="0.8"/>
+                    <path d="M127,95 Q127,60 155,55 Q183,60 183,95 Z" fill="#1F5A4A" opacity="0.9"/>
+                    <rect x="150" y="48" width="10" height="10" rx="3" fill="#A5D6A7"/>
+                    <circle cx="155" cy="106" r="5" fill="#A5D6A7"/>
+                    {/* Cruz */}
+                    <circle cx="155" cy="76" r="12" fill="white" opacity="0.9"/>
+                    <line x1="155" y1="68" x2="155" y2="84" stroke="#1F5A4A" strokeWidth="3" strokeLinecap="round"/>
+                    <line x1="147" y1="76" x2="163" y2="76" stroke="#1F5A4A" strokeWidth="3" strokeLinecap="round"/>
+                    {/* Folhas decorativas */}
+                    <ellipse cx="105" cy="80" rx="14" ry="6" fill="#81C784" opacity="0.5" transform="rotate(-30 105 80)"/>
+                    <ellipse cx="195" cy="70" rx="12" ry="5" fill="#81C784" opacity="0.4" transform="rotate(20 195 70)"/>
+                  </svg>
+                  {/* Badge ícone inferior esquerdo */}
+                  <div className="absolute bottom-3 left-3 w-9 h-9 rounded-full flex items-center justify-center shadow" style={{ backgroundColor: "#fff" }}>
+                    <BarChart3 size={16} style={{ color: "#1F5A4A" }} />
+                  </div>
+                </div>
+                {/* Texto do card */}
+                <div className="p-5 flex items-start justify-between gap-3">
+                  <div className="flex-1">
+                    <div className="w-8 h-1 rounded-full mb-3" style={{ backgroundColor: "#1F5A4A" }} />
+                    <h2 className="font-display text-xl font-bold mb-2 leading-tight" style={{ color: "#1F5A4A" }}>
+                      Alimentação hospitalar
+                    </h2>
+                    <p className="font-ui text-sm leading-relaxed" style={{ color: "#4A5568" }}>
+                      Controle de acesso e faturamento, indicadores e economia de alimentação hospitalar.
+                    </p>
+                  </div>
+                  <div className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center mt-1 transition-transform group-hover:translate-x-1"
+                    style={{ backgroundColor: "#1F5A4A" }}>
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <path d="M3 8h10M9 4l4 4-4 4" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </div>
+                </div>
+              </button>
+
+              {/* Card Medicamentos */}
+              <button
+                onClick={() => onIrPara("medicamentos")}
+                className="text-left rounded-2xl overflow-hidden transition-all hover:shadow-xl hover:-translate-y-1 group"
+                style={{ backgroundColor: "#ffffff", border: "1.5px solid #BBDEFB", boxShadow: "0 4px 20px rgba(61,90,115,0.08)" }}
+              >
+                {/* Área ilustrativa */}
+                <div className="relative h-44 flex items-end justify-center overflow-hidden"
+                  style={{ background: "linear-gradient(135deg, #E3F2FD 0%, #EDE7F6 60%, #E8F5E9 100%)" }}>
+                  <svg viewBox="0 0 400 80" className="absolute bottom-0 w-full" preserveAspectRatio="none">
+                    <path d="M0,40 Q100,10 200,40 T400,40 L400,80 L0,80 Z" fill="#3D5A73" opacity="0.15" />
+                    <path d="M0,55 Q100,30 200,55 T400,55 L400,80 L0,80 Z" fill="#3D5A73" opacity="0.25" />
+                  </svg>
+                  {/* Ilustração SVG: frasco + comprimidos */}
+                  <svg viewBox="0 0 220 140" className="absolute inset-0 w-full h-full" style={{ opacity: 0.9 }}>
+                    {/* Frasco */}
+                    <rect x="80" y="30" width="60" height="80" rx="10" fill="#3D5A73" opacity="0.85"/>
+                    <rect x="90" y="18" width="40" height="18" rx="5" fill="#5B7A91"/>
+                    <rect x="80" y="30" width="60" height="20" rx="0" fill="#5B7A91" opacity="0.6"/>
+                    {/* Cruz no frasco */}
+                    <circle cx="110" cy="80" r="18" fill="white" opacity="0.9"/>
+                    <line x1="110" y1="68" x2="110" y2="92" stroke="#3D5A73" strokeWidth="4" strokeLinecap="round"/>
+                    <line x1="98" y1="80" x2="122" y2="80" stroke="#3D5A73" strokeWidth="4" strokeLinecap="round"/>
+                    {/* Comprimidos */}
+                    <rect x="148" y="70" width="36" height="18" rx="9" fill="#90CAF9" opacity="0.9"/>
+                    <line x1="166" y1="70" x2="166" y2="88" stroke="#fff" strokeWidth="1.5"/>
+                    <rect x="152" y="95" width="36" height="18" rx="9" fill="#CE93D8" opacity="0.8"/>
+                    <line x1="170" y1="95" x2="170" y2="113" stroke="#fff" strokeWidth="1.5"/>
+                    <rect x="38" y="75" width="36" height="18" rx="9" fill="#A5D6A7" opacity="0.85"/>
+                    <line x1="56" y1="75" x2="56" y2="93" stroke="#fff" strokeWidth="1.5"/>
+                    {/* Blister */}
+                    <rect x="32" y="100" width="52" height="32" rx="4" fill="#B0BEC5" opacity="0.6"/>
+                    {[0,1,2].map(c => [0,1].map(r => (
+                      <ellipse key={`${c}-${r}`} cx={41 + c*16} cy={110 + r*12} rx="6" ry="5" fill="#90CAF9" opacity="0.8"/>
+                    )))}
+                    {/* Folhas decorativas */}
+                    <ellipse cx="170" cy="45" rx="14" ry="6" fill="#81C784" opacity="0.4" transform="rotate(25 170 45)"/>
+                    <ellipse cx="50" cy="55" rx="12" ry="5" fill="#81C784" opacity="0.35" transform="rotate(-15 50 55)"/>
+                  </svg>
+                  {/* Badge ícone inferior esquerdo */}
+                  <div className="absolute bottom-3 left-3 w-9 h-9 rounded-full flex items-center justify-center shadow" style={{ backgroundColor: "#fff" }}>
+                    <Pill size={16} style={{ color: "#3D5A73" }} />
+                  </div>
+                </div>
+                {/* Texto do card */}
+                <div className="p-5 flex items-start justify-between gap-3">
+                  <div className="flex-1">
+                    <div className="w-8 h-1 rounded-full mb-3" style={{ backgroundColor: "#3D5A73" }} />
+                    <h2 className="font-display text-xl font-bold mb-2 leading-tight" style={{ color: "#3D5A73" }}>
+                      Medicamentos
+                    </h2>
+                    <p className="font-ui text-sm leading-relaxed" style={{ color: "#4A5568" }}>
+                      Inventários periódicos e testes de acurácia da curva ABC, por estoque.
+                    </p>
+                  </div>
+                  <div className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center mt-1 transition-transform group-hover:translate-x-1"
+                    style={{ backgroundColor: "#3D5A73" }}>
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <path d="M3 8h10M9 4l4 4-4 4" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </div>
+                </div>
+              </button>
+            </div>
+
+            {/* Rodapé institucional */}
+            <div className="rounded-xl px-5 py-4 flex flex-wrap items-center justify-between gap-4 mb-6"
+              style={{ backgroundColor: "#fff", border: "1px solid #E2E8F0" }}>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: "#EEF2F7" }}>
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path d="M8 1L10 6H15L11 9.5L12.5 15L8 12L3.5 15L5 9.5L1 6H6Z" fill="#3D5A73" opacity="0.7"/>
+                  </svg>
+                </div>
+                <div>
+                  <p className="font-ui text-xs" style={{ color: "#6B7A8D" }}>Desenvolvido pela</p>
+                  <p className="font-ui text-sm font-semibold" style={{ color: "#1C3A5A" }}>Gerência Geral de Governança e Riscos</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: "#EEF2F7" }}>
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <rect x="1" y="3" width="12" height="8" rx="1.5" stroke="#3D5A73" strokeWidth="1.2"/>
+                    <path d="M1 4.5L7 8.5L13 4.5" stroke="#3D5A73" strokeWidth="1.2"/>
+                  </svg>
+                </div>
+                <p className="font-mono-label text-xs" style={{ color: "#4A5568" }}>sistemadecontroleinterno@scge.pe.gov.br</p>
+              </div>
+            </div>
+
+            {/* Três pilares */}
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { icon: <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="2" width="14" height="14" rx="3" stroke="#1F5A4A" strokeWidth="1.5"/><path d="M5 9l2.5 2.5L13 6" stroke="#1F5A4A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>, titulo: "Transparência", descricao: "Informações confiáveis para melhor gestão", cor: "#1F5A4A" },
+                { icon: <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7" stroke="#8B7355" strokeWidth="1.5"/><circle cx="9" cy="9" r="3" stroke="#8B7355" strokeWidth="1.5"/><line x1="9" y1="2" x2="9" y2="6" stroke="#8B7355" strokeWidth="1.5" strokeLinecap="round"/></svg>, titulo: "Controle", descricao: "Acompanhamento contínuo e decisões assertivas", cor: "#8B7355" },
+                { icon: <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M3 14L7 9l3 3 5-6" stroke="#3D5A73" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>, titulo: "Eficiência", descricao: "Processos integrados para mais economia e segurança", cor: "#3D5A73" },
+              ].map(({ icon, titulo, descricao, cor }) => (
+                <div key={titulo} className="text-center p-4 rounded-xl" style={{ backgroundColor: "#fff", border: "1px solid #E2E8F0" }}>
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-2" style={{ backgroundColor: `${cor}18` }}>
+                    {icon}
+                  </div>
+                  <p className="font-display text-sm font-semibold mb-1" style={{ color: "#1C3A5A" }}>{titulo}</p>
+                  <p className="font-ui text-xs leading-snug" style={{ color: "#6B7A8D" }}>{descricao}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </main>
+      </div>
     </div>
   );
 }
 
 function TelaHome({ onIrPara, onVoltarProduto }) {
   return (
-    <div className="min-h-screen bg-[#EDE7D9] text-[#1C1A17] flex flex-col" style={{ fontFamily: "'Fraunces', Georgia, serif" }}>
+    <div className="min-h-screen bg-[#F4F7FA] flex flex-col" style={{ fontFamily: "'Fraunces', Georgia, serif" }}>
       <FontesGlobais />
-      <header className="border-b-2 border-[#1C1A17] bg-[#1C1A17] text-[#EDE7D9]">
-        <div className="max-w-3xl mx-auto px-6 py-5">
-          <div className="flex items-center justify-between gap-4 mb-4">
+      <header className="bg-[#1C3A5A] text-white shadow-md">
+        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
             {onVoltarProduto && (
-              <button onClick={onVoltarProduto} className="text-[#EDE7D9]/70 hover:text-[#EDE7D9] transition-colors flex-shrink-0" aria-label="Voltar para seleção de produto">
+              <button onClick={onVoltarProduto} className="text-white/70 hover:text-white transition-colors flex-shrink-0" aria-label="Voltar">
                 <ArrowLeft size={18} />
               </button>
             )}
-            <LogosCabecalho alturaPE={26} alturaSCI={40} />
+            <img src={LOGO_PE_BASE64} alt="Governo de Pernambuco" style={{ height: 24 }} />
+            <div className="w-px h-6 bg-white/20" />
+            <div>
+              <p className="font-ui text-sm font-semibold leading-tight">Alimentação Hospitalar</p>
+              <p className="font-mono-label text-[10px] text-white/60 uppercase tracking-wide">Controle Interno — SES-PE</p>
+            </div>
           </div>
-          <p className="font-display text-base font-medium leading-tight">Controladoria-Geral do Estado</p>
-          <p className="font-mono-label text-[11px] text-[#EDE7D9]/60 tracking-wide mt-1 uppercase">
-            Alimentação Hospitalar — Controle de Acesso e Faturamento
-          </p>
+          <img src={LOGO_SCI_BASE64} alt="SCI" style={{ height: 30 }} />
         </div>
       </header>
 
-      <main className="flex-1 max-w-3xl mx-auto px-6 py-14 w-full">
-        <p className="font-mono-label text-[11px] uppercase tracking-wider text-[#6B6357] mb-2">O que você deseja fazer?</p>
-        <h1 className="font-display text-2xl font-medium mb-10">Selecione uma ação</h1>
+      <main className="flex-1 flex items-center justify-center px-6 py-10">
+        <div className="max-w-3xl w-full">
+          <p className="font-mono-label text-[11px] uppercase tracking-[0.18em] text-[#6B7A8D] mb-2">O que você deseja fazer?</p>
+          <h1 className="font-display text-3xl font-bold mb-8" style={{ color: "#1C3A5A" }}>Selecione uma ação</h1>
 
-        <div className="grid sm:grid-cols-2 gap-5">
-          <button
-            onClick={() => onIrPara("monitoramento")}
-            className="text-left border-2 border-[#1C1A17] bg-[#FAF7EF] p-6 hover:bg-[#1C1A17] hover:text-[#FAF7EF] transition-colors group"
-          >
-            <ClipboardList size={28} className="mb-4 text-[#8B7355]" />
-            <p className="font-display text-lg font-medium mb-2">Realizar monitoramento</p>
-            <p className="font-ui text-sm opacity-80 leading-relaxed">
-              Aplicar o checklist mensal de verificação e inserir os dados de consumo de alimentação, por hospital.
-            </p>
-          </button>
+          <div className="grid sm:grid-cols-2 gap-5">
+            <button
+              onClick={() => onIrPara("monitoramento")}
+              className="text-left bg-white rounded-2xl p-6 hover:shadow-xl hover:-translate-y-1 transition-all group"
+              style={{ border: "1.5px solid #C8E6C9", boxShadow: "0 2px 12px rgba(31,90,74,0.07)" }}
+            >
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4" style={{ backgroundColor: "#E8F5E9" }}>
+                <ClipboardList size={24} style={{ color: "#1F5A4A" }} />
+              </div>
+              <div className="w-6 h-0.5 rounded-full mb-3" style={{ backgroundColor: "#1F5A4A" }} />
+              <p className="font-display text-lg font-bold mb-2" style={{ color: "#1F5A4A" }}>Realizar monitoramento</p>
+              <p className="font-ui text-sm leading-relaxed" style={{ color: "#4A5568" }}>
+                Aplicar o checklist mensal e inserir dados de consumo de alimentação por hospital.
+              </p>
+            </button>
 
-          <button
-            onClick={() => onIrPara("painel")}
-            className="text-left border-2 border-[#1C1A17] bg-[#FAF7EF] p-6 hover:bg-[#1C1A17] hover:text-[#FAF7EF] transition-colors group"
-          >
-            <BarChart3 size={28} className="mb-4 text-[#8B7355]" />
-            <p className="font-display text-lg font-medium mb-2">Visualizar painel</p>
-            <p className="font-ui text-sm opacity-80 leading-relaxed">
-              Acompanhar a série histórica de acesso biométrico, ICA, economia e o detalhamento mensal por hospital.
-            </p>
-          </button>
+            <button
+              onClick={() => onIrPara("painel")}
+              className="text-left bg-white rounded-2xl p-6 hover:shadow-xl hover:-translate-y-1 transition-all group"
+              style={{ border: "1.5px solid #BBDEFB", boxShadow: "0 2px 12px rgba(61,90,115,0.07)" }}
+            >
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4" style={{ backgroundColor: "#E3F2FD" }}>
+                <BarChart3 size={24} style={{ color: "#3D5A73" }} />
+              </div>
+              <div className="w-6 h-0.5 rounded-full mb-3" style={{ backgroundColor: "#3D5A73" }} />
+              <p className="font-display text-lg font-bold mb-2" style={{ color: "#3D5A73" }}>Visualizar painel</p>
+              <p className="font-ui text-sm leading-relaxed" style={{ color: "#4A5568" }}>
+                Série histórica de biometria, ICA, indicadores de proporção e economia por hospital.
+              </p>
+            </button>
+          </div>
         </div>
       </main>
     </div>
@@ -670,7 +895,7 @@ function LogosCabecalho({ alturaPE = 26, alturaSCI = 40 }) {
   return (
     <div className="flex items-center justify-center w-full gap-6">
       <img src={LOGO_PE_BASE64} alt="Governo de Pernambuco — Secretaria da Controladoria-Geral do Estado" style={{ height: alturaPE }} />
-      <div className="w-px self-stretch bg-[#EDE7D9]/20" />
+      <div className="w-px self-stretch bg-[#F4F7FA]/20" />
       <img src={LOGO_SCI_BASE64} alt="SCI — Sistema de Controle Interno" style={{ height: alturaSCI }} />
     </div>
   );
@@ -718,21 +943,34 @@ function FontesGlobais() {
 
 function BarraTopo({ titulo, onVoltar, produto = "Alimentação Hospitalar" }) {
   return (
-    <header className="border-b-2 border-[#1C1A17] bg-[#1C1A17] text-[#EDE7D9]">
-      <div className="max-w-5xl mx-auto px-6 py-3 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3 min-w-0">
-          <button onClick={onVoltar} className="text-[#EDE7D9]/70 hover:text-[#EDE7D9] transition-colors flex-shrink-0" aria-label="Voltar">
-            <ArrowLeft size={18} />
-          </button>
-          <img src={LOGO_PE_BASE64} alt="Governo de Pernambuco" style={{ height: 20 }} className="flex-shrink-0" />
-          <div className="min-w-0">
-            <p className="font-ui text-sm font-medium leading-tight truncate">{titulo}</p>
-            <p className="font-mono-label text-[11px] text-[#EDE7D9]/60 tracking-wide uppercase truncate">{produto}</p>
+    <>
+      <header className="border-b border-[#1C3A5A]/20 bg-[#1C3A5A] text-white">
+        <div className="max-w-5xl mx-auto px-6 py-3 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <button onClick={onVoltar} className="text-[#EDE7D9]/70 hover:text-[#EDE7D9] transition-colors flex-shrink-0" aria-label="Voltar">
+              <ArrowLeft size={18} />
+            </button>
+            <img src={LOGO_PE_BASE64} alt="Governo de Pernambuco" style={{ height: 20 }} className="flex-shrink-0" />
+            <div className="min-w-0">
+              <p className="font-ui text-sm font-medium leading-tight truncate">{titulo}</p>
+              <p className="font-mono-label text-[11px] text-[#EDE7D9]/60 tracking-wide uppercase truncate">{produto}</p>
+            </div>
           </div>
+          <img src={LOGO_SCI_BASE64} alt="SCI — Sistema de Controle Interno" style={{ height: 32 }} className="flex-shrink-0" />
         </div>
-        <img src={LOGO_SCI_BASE64} alt="SCI — Sistema de Controle Interno" style={{ height: 32 }} className="flex-shrink-0" />
-      </div>
-    </header>
+      </header>
+
+      {/* Botão flutuante fixo — sempre visível ao rolar a página */}
+      <button
+        onClick={onVoltar}
+        aria-label="Voltar"
+        className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 shadow-lg transition-all hover:opacity-90 active:scale-95"
+        style={{ backgroundColor: "#1C3A5A", color: "white", border: "2px solid #8B7355", borderRadius: "12px" }}
+      >
+        <ArrowLeft size={16} />
+        <span className="font-mono-label text-[11px] uppercase tracking-wide">Voltar</span>
+      </button>
+    </>
   );
 }
 
@@ -742,33 +980,41 @@ function TelaMonitoramento({ onVoltar }) {
 
   if (aba === null) {
     return (
-      <div className="min-h-screen bg-[#EDE7D9] text-[#1C1A17]" style={{ fontFamily: "'Fraunces', Georgia, serif" }}>
+      <div className="min-h-screen bg-[#F4F7FA] text-[#1C1A17]" style={{ fontFamily: "'Fraunces', Georgia, serif" }}>
         <FontesGlobais />
         <BarraTopo titulo="Realizar monitoramento" onVoltar={onVoltar} />
 
-        <main className="max-w-3xl mx-auto px-6 py-14">
-          <p className="font-mono-label text-[11px] uppercase tracking-wider text-[#6B6357] mb-2">O que você deseja fazer?</p>
-          <h1 className="font-display text-2xl font-medium mb-10">Selecione uma ação</h1>
+        <main className="max-w-3xl mx-auto px-6 py-10">
+          <p className="font-mono-label text-[11px] uppercase tracking-[0.18em] text-[#6B7A8D] mb-2">O que você deseja fazer?</p>
+          <h1 className="font-display text-3xl font-bold mb-8" style={{ color: "#1C3A5A" }}>Selecione uma ação</h1>
 
           <div className="flex flex-col gap-5">
             <button
               onClick={() => setAba("checklist")}
-              className="text-left border-2 border-[#1C1A17] bg-[#FAF7EF] p-6 hover:bg-[#1C1A17] hover:text-[#FAF7EF] transition-colors group"
+              className="text-left bg-white rounded-2xl p-6 hover:shadow-xl hover:-translate-y-0.5 transition-all group"
+              style={{ border: "1.5px solid #C8E6C9", boxShadow: "0 2px 12px rgba(31,90,74,0.07)" }}
             >
-              <ClipboardList size={28} className="mb-4 text-[#8B7355]" />
-              <p className="font-display text-lg font-medium mb-2">Aplicar checklist</p>
-              <p className="font-ui text-sm opacity-80 leading-relaxed">
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4" style={{ backgroundColor: "#E8F5E9" }}>
+                <ClipboardList size={24} style={{ color: "#1F5A4A" }} />
+              </div>
+              <div className="w-6 h-0.5 rounded-full mb-3" style={{ backgroundColor: "#1F5A4A" }} />
+              <p className="font-display text-lg font-bold mb-2" style={{ color: "#1F5A4A" }}>Aplicar checklist</p>
+              <p className="font-ui text-sm leading-relaxed" style={{ color: "#4A5568" }}>
                 Verificar, artigo por artigo, os pontos de controle do mês para o hospital selecionado.
               </p>
             </button>
 
             <button
               onClick={() => setAba("consumo")}
-              className="text-left border-2 border-[#1C1A17] bg-[#FAF7EF] p-6 hover:bg-[#1C1A17] hover:text-[#FAF7EF] transition-colors group"
+              className="text-left bg-white rounded-2xl p-6 hover:shadow-xl hover:-translate-y-0.5 transition-all group"
+              style={{ border: "1.5px solid #BBDEFB", boxShadow: "0 2px 12px rgba(61,90,115,0.07)" }}
             >
-              <ClipboardList size={28} className="mb-4 text-[#8B7355]" />
-              <p className="font-display text-lg font-medium mb-2">Inserir dados de consumo</p>
-              <p className="font-ui text-sm opacity-80 leading-relaxed">
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4" style={{ backgroundColor: "#E3F2FD" }}>
+                <FileText size={24} style={{ color: "#3D5A73" }} />
+              </div>
+              <div className="w-6 h-0.5 rounded-full mb-3" style={{ backgroundColor: "#3D5A73" }} />
+              <p className="font-display text-lg font-bold mb-2" style={{ color: "#3D5A73" }}>Inserir dados de consumo</p>
+              <p className="font-ui text-sm leading-relaxed" style={{ color: "#4A5568" }}>
                 Registrar as refeições servidas no mês e consultar a referência e o custo unitário travados.
               </p>
             </button>
@@ -779,7 +1025,7 @@ function TelaMonitoramento({ onVoltar }) {
   }
 
   return (
-    <div className="min-h-screen bg-[#EDE7D9] text-[#1C1A17]" style={{ fontFamily: "'Fraunces', Georgia, serif" }}>
+    <div className="min-h-screen bg-[#F4F7FA] text-[#1C1A17]" style={{ fontFamily: "'Fraunces', Georgia, serif" }}>
       <FontesGlobais />
       <BarraTopo titulo="Realizar monitoramento" onVoltar={() => setAba(null)} />
 
@@ -808,6 +1054,39 @@ function AbaChecklist() {
   const [percentualBiometria, setPercentualBiometria] = useState("");
   const [motivoNaoAtingimento, setMotivoNaoAtingimento] = useState("");
   const [acoesPactuadas, setAcoesPactuadas] = useState([""]);
+
+  // Indicador: proporção refeições de acompanhante / pacientes (meta = 3,0; crítico > 3,3)
+  const [mediaRefeicoesAcomp, setMediaRefeicoesAcomp] = useState("");
+  const [mediaPacientesAcomp, setMediaPacientesAcomp] = useState("");
+  const [justificativaAcomp, setJustificativaAcomp] = useState("");
+
+  const refeicoesAcompNum = mediaRefeicoesAcomp === "" ? null : Number(mediaRefeicoesAcomp);
+  const pacientesAcompNum = mediaPacientesAcomp === "" ? null : Number(mediaPacientesAcomp);
+  const razaoAcomp =
+    refeicoesAcompNum !== null && pacientesAcompNum !== null &&
+    !Number.isNaN(refeicoesAcompNum) && !Number.isNaN(pacientesAcompNum) && pacientesAcompNum > 0
+      ? Math.round((refeicoesAcompNum / pacientesAcompNum) * 100) / 100
+      : null;
+  const acompNaoConforme = razaoAcomp !== null && razaoAcomp > 3.0;
+  const acompCritico = razaoAcomp !== null && razaoAcomp > 3.3;
+  const acompPreenchido =
+    refeicoesAcompNum !== null && pacientesAcompNum !== null &&
+    !Number.isNaN(refeicoesAcompNum) && !Number.isNaN(pacientesAcompNum) && pacientesAcompNum > 0;
+  const justificativaAcompCompleta = !acompCritico || justificativaAcomp.trim().length > 0;
+  const [mediaLanches, setMediaLanches] = useState("");
+  const [mediaPacientes, setMediaPacientes] = useState("");
+  const [justificativaLanche, setJustificativaLanche] = useState("");
+
+  const lancheNum = mediaLanches === "" ? null : Number(mediaLanches);
+  const pacienteNum = mediaPacientes === "" ? null : Number(mediaPacientes);
+  const razaoLanche =
+    lancheNum !== null && pacienteNum !== null && !Number.isNaN(lancheNum) && !Number.isNaN(pacienteNum) && pacienteNum > 0
+      ? Math.round((lancheNum / pacienteNum) * 100) / 100
+      : null;
+  const lancheNaoConforme = razaoLanche !== null && razaoLanche > 1.0;
+  const lancheCritico = razaoLanche !== null && razaoLanche > 1.1;
+  const lanchePreenchido = lancheNum !== null && pacienteNum !== null && !Number.isNaN(lancheNum) && !Number.isNaN(pacienteNum) && pacienteNum > 0;
+  const justificativaLancheCompleta = !lancheCritico || justificativaLanche.trim().length > 0;
 
   const percentualNum = percentualBiometria === "" ? null : Number(percentualBiometria);
   const abaixoDaMeta = percentualNum !== null && !Number.isNaN(percentualNum) && percentualNum < META_BIOMETRIA;
@@ -857,13 +1136,17 @@ function AbaChecklist() {
     progresso.respondidos === progresso.total &&
     responsavel.trim().length > 0 &&
     percentualPreenchido &&
-    justificativaBiometriaCompleta;
+    justificativaBiometriaCompleta &&
+    lanchePreenchido &&
+    justificativaLancheCompleta &&
+    acompPreenchido &&
+    justificativaAcompCompleta;
 
   return (
     <>
     <main className="max-w-5xl mx-auto px-6 py-10">
-        <section className="mb-10 border-2 border-[#1C1A17] bg-[#FAF7EF]">
-          <div className="border-b-2 border-[#1C1A17] px-6 py-3 flex items-center gap-2">
+        <section className="mb-10 bg-white border border-[#E2E8F0] rounded-xl">
+          <div className="border-b-2 border-[#E2E8F0] px-6 py-3 flex items-center gap-2">
             <Building2 size={16} />
             <h2 className="font-ui text-sm font-semibold uppercase tracking-wide">Identificação da verificação</h2>
           </div>
@@ -876,7 +1159,7 @@ function AbaChecklist() {
                 <select
                   value={hospital}
                   onChange={(e) => setHospital(e.target.value)}
-                  className="w-full appearance-none bg-transparent border-b-2 border-[#1C1A17] py-2 pr-8 font-ui text-base focus:outline-none focus:border-[#8B7355]"
+                  className="w-full appearance-none bg-transparent border-b-2 border-[#E2E8F0] py-2 pr-8 font-ui text-base focus:outline-none focus:border-[#3D5A73]"
                 >
                   {HOSPITAIS.map((h) => (
                     <option key={h.sigla} value={h.sigla}>{h.sigla} — {h.nome}</option>
@@ -895,7 +1178,7 @@ function AbaChecklist() {
                   <select
                     value={mesRef}
                     onChange={(e) => setMesRef(Number(e.target.value))}
-                    className="w-full appearance-none bg-transparent border-b-2 border-[#1C1A17] py-2 pr-8 font-ui text-base focus:outline-none focus:border-[#8B7355]"
+                    className="w-full appearance-none bg-transparent border-b-2 border-[#E2E8F0] py-2 pr-8 font-ui text-base focus:outline-none focus:border-[#3D5A73]"
                   >
                     {MESES.map((m, i) => (
                       <option key={m} value={i}>{m}</option>
@@ -907,7 +1190,7 @@ function AbaChecklist() {
                   type="number"
                   value={anoRef}
                   onChange={(e) => setAnoRef(Number(e.target.value))}
-                  className="w-20 bg-transparent border-b-2 border-[#1C1A17] py-2 font-ui text-base focus:outline-none focus:border-[#8B7355]"
+                  className="w-20 bg-transparent border-b-2 border-[#E2E8F0] py-2 font-ui text-base focus:outline-none focus:border-[#3D5A73]"
                 />
               </div>
             </div>
@@ -921,7 +1204,7 @@ function AbaChecklist() {
                 value={responsavel}
                 onChange={(e) => setResponsavel(e.target.value)}
                 placeholder="Nome do servidor responsável"
-                className="w-full bg-transparent border-b-2 border-[#1C1A17] py-2 font-ui text-base placeholder:text-[#6B6357]/50 focus:outline-none focus:border-[#8B7355]"
+                className="w-full bg-transparent border-b-2 border-[#E2E8F0] py-2 font-ui text-base placeholder:text-[#6B6357]/50 focus:outline-none focus:border-[#3D5A73]"
               />
             </div>
           </div>
@@ -940,7 +1223,7 @@ function AbaChecklist() {
           {ARTIGOS.map((item, idx) => {
             const status = respostas[item.art];
             const obsOpen = openObs[item.art];
-            const destacarCritico = item.sensivel || (item.metrico && abaixoDaMeta);
+            const destacarCritico = item.sensivel || (item.metrico && abaixoDaMeta) || (item.metricoLanche && lancheNaoConforme) || (item.metricoAcomp && acompNaoConforme);
             return (
               <div
                 key={item.art}
@@ -958,6 +1241,16 @@ function AbaChecklist() {
                         </span>
                       )}
                       {item.metrico && (
+                        <span className="font-mono-label text-[10px] uppercase tracking-wider text-[#6B6357] border border-[#6B6357] px-1.5 py-0.5">
+                          Indicador mensal
+                        </span>
+                      )}
+                      {item.metricoLanche && (
+                        <span className="font-mono-label text-[10px] uppercase tracking-wider text-[#6B6357] border border-[#6B6357] px-1.5 py-0.5">
+                          Indicador mensal
+                        </span>
+                      )}
+                      {item.metricoAcomp && (
                         <span className="font-mono-label text-[10px] uppercase tracking-wider text-[#6B6357] border border-[#6B6357] px-1.5 py-0.5">
                           Indicador mensal
                         </span>
@@ -981,8 +1274,8 @@ function AbaChecklist() {
                                 value={percentualBiometria}
                                 onChange={(e) => setPercentualBiometria(e.target.value)}
                                 placeholder="0,0"
-                                className={`w-28 bg-[#EDE7D9] border-2 py-2 px-3 font-ui text-lg font-semibold focus:outline-none
-                                  ${criticoBiometria ? "border-[#A13D2B] text-[#A13D2B] ring-2 ring-[#A13D2B]/30" : abaixoDaMeta ? "border-[#A13D2B] text-[#A13D2B]" : "border-[#1C1A17] text-[#1C1A17] focus:border-[#8B7355]"}`}
+                                className={`w-28 bg-[#F4F7FA] border-2 py-2 px-3 font-ui text-lg font-semibold focus:outline-none
+                                  ${criticoBiometria ? "border-[#A13D2B] text-[#A13D2B] ring-2 ring-[#A13D2B]/30" : abaixoDaMeta ? "border-[#A13D2B] text-[#A13D2B]" : "border-[#1C1A17] text-[#1C1A17] focus:border-[#3D5A73]"}`}
                               />
                               <span className="font-ui text-lg text-[#6B6357]">%</span>
                             </div>
@@ -1009,7 +1302,7 @@ function AbaChecklist() {
                         )}
 
                         {abaixoDaMeta && (
-                          <div className={`mt-4 border-2 p-4 space-y-3 ${criticoBiometria ? "border-[#A13D2B] bg-[#A13D2B]/5" : "border-[#1C1A17]/30 bg-[#EDE7D9]"}`}>
+                          <div className={`mt-4 border-2 p-4 space-y-3 ${criticoBiometria ? "border-[#A13D2B] bg-[#A13D2B]/5" : "border-[#1C1A17]/30 bg-[#F4F7FA]"}`}>
                             <p className={`font-mono-label text-[11px] uppercase tracking-wider font-semibold ${criticoBiometria ? "text-[#A13D2B]" : "text-[#6B6357]"}`}>
                               {criticoBiometria
                                 ? "Percentual abaixo de 70% — justificativa obrigatória"
@@ -1024,7 +1317,7 @@ function AbaChecklist() {
                                 onChange={(e) => setMotivoNaoAtingimento(e.target.value)}
                                 placeholder="Ex.: catraca apresentou falhas recorrentes na ala B durante 12 dias..."
                                 rows={2}
-                                className={`w-full bg-[#FAF7EF] border p-3 font-ui text-sm placeholder:text-[#6B6357]/50 focus:outline-none resize-none ${criticoBiometria ? "border-[#A13D2B]/40 focus:border-[#A13D2B]" : "border-[#1C1A17]/30 focus:border-[#8B7355]"}`}
+                                className={`w-full bg-[#FAF7EF] border p-3 font-ui text-sm placeholder:text-[#6B6357]/50 focus:outline-none resize-none ${criticoBiometria ? "border-[#A13D2B]/40 focus:border-[#A13D2B]" : "border-[#1C1A17]/30 focus:border-[#3D5A73]"}`}
                               />
                             </div>
                             <div>
@@ -1040,7 +1333,7 @@ function AbaChecklist() {
                                       onChange={(e) => atualizarAcao(idx, e.target.value)}
                                       placeholder="Ex.: manutenção da catraca agendada para o dia X..."
                                       rows={1}
-                                      className={`flex-1 bg-[#FAF7EF] border p-2 font-ui text-sm placeholder:text-[#6B6357]/50 focus:outline-none resize-none ${criticoBiometria ? "border-[#A13D2B]/40 focus:border-[#A13D2B]" : "border-[#1C1A17]/30 focus:border-[#8B7355]"}`}
+                                      className={`flex-1 bg-[#FAF7EF] border p-2 font-ui text-sm placeholder:text-[#6B6357]/50 focus:outline-none resize-none ${criticoBiometria ? "border-[#A13D2B]/40 focus:border-[#A13D2B]" : "border-[#1C1A17]/30 focus:border-[#3D5A73]"}`}
                                     />
                                     {acoesPactuadas.length > 1 && (
                                       <button
@@ -1066,6 +1359,184 @@ function AbaChecklist() {
                       </div>
                     )}
 
+                    {item.metricoLanche && (
+                      <div className="mt-4 max-w-2xl">
+                        <div className="flex items-end gap-4 flex-wrap">
+                          <div>
+                            <label className="font-mono-label text-[11px] uppercase tracking-wider text-[#6B6357] block mb-2">
+                              Média diária de lanches fornecidos
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.1"
+                              value={mediaLanches}
+                              onChange={(e) => setMediaLanches(e.target.value)}
+                              placeholder="0"
+                              className={`w-28 bg-[#F4F7FA] border-2 py-2 px-3 font-ui text-lg font-semibold focus:outline-none
+                                ${lancheNaoConforme ? "border-[#A13D2B] text-[#A13D2B]" : "border-[#1C1A17] text-[#1C1A17] focus:border-[#3D5A73]"}`}
+                            />
+                          </div>
+                          <div>
+                            <label className="font-mono-label text-[11px] uppercase tracking-wider text-[#6B6357] block mb-2">
+                              Média diária de pacientes internados
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.1"
+                              value={mediaPacientes}
+                              onChange={(e) => setMediaPacientes(e.target.value)}
+                              placeholder="0"
+                              className="w-28 bg-[#F4F7FA] border-2 border-[#1C1A17] py-2 px-3 font-ui text-lg font-semibold focus:outline-none focus:border-[#3D5A73] text-[#1C1A17]"
+                            />
+                          </div>
+                          {razaoLanche !== null && (
+                            <div className="pb-2.5 flex flex-col gap-1">
+                              <span className="font-mono-label text-[11px] text-[#6B6357] uppercase tracking-wider">Razão apurada</span>
+                              <span className={`font-mono-label text-xl font-semibold ${lancheNaoConforme ? "text-[#A13D2B]" : "text-[#1F5A4A]"}`}>
+                                {razaoLanche.toFixed(2)}
+                              </span>
+                            </div>
+                          )}
+                          {razaoLanche !== null && (
+                            <div className="pb-2.5">
+                              {!lancheNaoConforme && (
+                                <span className="font-mono-label text-[11px] uppercase tracking-wider px-2 py-1 border-2 border-[#1F5A4A] text-[#1F5A4A] bg-[#1F5A4A]/10 flex items-center gap-1">
+                                  <Check size={12} /> Conforme
+                                </span>
+                              )}
+                              {lancheNaoConforme && !lancheCritico && (
+                                <span className="font-mono-label text-[11px] uppercase tracking-wider px-2 py-1 border-2 border-[#A13D2B] text-[#A13D2B] flex items-center gap-1">
+                                  <X size={12} /> Não conforme
+                                </span>
+                              )}
+                              {lancheCritico && (
+                                <span className="font-mono-label text-[11px] uppercase tracking-wider px-2 py-1 border-2 border-[#A13D2B] text-[#A13D2B] bg-[#A13D2B]/10 flex items-center gap-1">
+                                  <AlertTriangle size={12} /> Não conforme — justificativa obrigatória
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {lancheCritico && (
+                          <div className="mt-4 border-2 border-[#A13D2B] bg-[#A13D2B]/5 p-4">
+                            <p className="font-mono-label text-[11px] uppercase tracking-wider font-semibold text-[#A13D2B] mb-3">
+                              Razão acima de 1,1 — justificativa obrigatória <span className="text-[#A13D2B]">*</span>
+                            </p>
+                            <textarea
+                              value={justificativaLanche}
+                              onChange={(e) => setJustificativaLanche(e.target.value)}
+                              placeholder="Ex.: em função do Dia do Profissional de Saúde, foram servidos lanches adicionais mediante autorização da direção. Relação nominal dos beneficiados disponível em arquivo X..."
+                              rows={3}
+                              className="w-full bg-[#FAF7EF] border border-[#A13D2B]/40 focus:border-[#A13D2B] p-3 font-ui text-sm placeholder:text-[#6B6357]/50 focus:outline-none resize-none"
+                            />
+                          </div>
+                        )}
+
+                        {lancheNaoConforme && !lancheCritico && (
+                          <div className="mt-3 border border-[#1C1A17]/30 bg-[#F4F7FA] p-3">
+                            <p className="font-ui text-sm text-[#6B6357]">
+                              Razão acima de 1,0. Considere registrar uma observação abaixo explicando o contexto da distorção.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {item.metricoAcomp && (
+                      <div className="mt-4 max-w-2xl">
+                        <div className="flex items-end gap-4 flex-wrap">
+                          <div>
+                            <label className="font-mono-label text-[11px] uppercase tracking-wider text-[#6B6357] block mb-2">
+                              Média diária de refeições de acompanhante
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.1"
+                              value={mediaRefeicoesAcomp}
+                              onChange={(e) => setMediaRefeicoesAcomp(e.target.value)}
+                              placeholder="0"
+                              className={`w-28 bg-[#F4F7FA] border-2 py-2 px-3 font-ui text-lg font-semibold focus:outline-none
+                                ${acompNaoConforme ? "border-[#A13D2B] text-[#A13D2B]" : "border-[#1C1A17] text-[#1C1A17] focus:border-[#3D5A73]"}`}
+                            />
+                          </div>
+                          <div>
+                            <label className="font-mono-label text-[11px] uppercase tracking-wider text-[#6B6357] block mb-2">
+                              Média diária de pacientes internados
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.1"
+                              value={mediaPacientesAcomp}
+                              onChange={(e) => setMediaPacientesAcomp(e.target.value)}
+                              placeholder="0"
+                              className="w-28 bg-[#F4F7FA] border-2 border-[#1C1A17] py-2 px-3 font-ui text-lg font-semibold focus:outline-none focus:border-[#3D5A73] text-[#1C1A17]"
+                            />
+                          </div>
+                          {razaoAcomp !== null && (
+                            <div className="pb-2.5 flex flex-col gap-1">
+                              <span className="font-mono-label text-[11px] text-[#6B6357] uppercase tracking-wider">Razão apurada</span>
+                              <span className={`font-mono-label text-xl font-semibold ${acompNaoConforme ? "text-[#A13D2B]" : "text-[#1F5A4A]"}`}>
+                                {razaoAcomp.toFixed(2)}
+                              </span>
+                            </div>
+                          )}
+                          {razaoAcomp !== null && (
+                            <div className="pb-2.5">
+                              {!acompNaoConforme && (
+                                <span className="font-mono-label text-[11px] uppercase tracking-wider px-2 py-1 border-2 border-[#1F5A4A] text-[#1F5A4A] bg-[#1F5A4A]/10 flex items-center gap-1">
+                                  <Check size={12} /> Conforme
+                                </span>
+                              )}
+                              {acompNaoConforme && !acompCritico && (
+                                <span className="font-mono-label text-[11px] uppercase tracking-wider px-2 py-1 border-2 border-[#A13D2B] text-[#A13D2B] flex items-center gap-1">
+                                  <X size={12} /> Não conforme
+                                </span>
+                              )}
+                              {acompCritico && (
+                                <span className="font-mono-label text-[11px] uppercase tracking-wider px-2 py-1 border-2 border-[#A13D2B] text-[#A13D2B] bg-[#A13D2B]/10 flex items-center gap-1">
+                                  <AlertTriangle size={12} /> Não conforme — justificativa obrigatória
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {razaoAcomp !== null && (
+                          <p className="font-mono-label text-[11px] text-[#6B6357] mt-2">
+                            Meta: <span className="text-[#1C1A17] font-semibold">3,0</span> refeições/paciente/dia · Crítico acima de <span className="font-semibold">3,3</span>
+                          </p>
+                        )}
+
+                        {acompCritico && (
+                          <div className="mt-4 border-2 border-[#A13D2B] bg-[#A13D2B]/5 p-4">
+                            <p className="font-mono-label text-[11px] uppercase tracking-wider font-semibold text-[#A13D2B] mb-3">
+                              Razão acima de 3,3 — justificativa obrigatória <span className="text-[#A13D2B]">*</span>
+                            </p>
+                            <textarea
+                              value={justificativaAcomp}
+                              onChange={(e) => setJustificativaAcomp(e.target.value)}
+                              placeholder="Ex.: evento institucional no dia X gerou aumento temporário de acompanhantes autorizados pela direção. Relação nominal disponível em arquivo Y..."
+                              rows={3}
+                              className="w-full bg-[#FAF7EF] border border-[#A13D2B]/40 focus:border-[#A13D2B] p-3 font-ui text-sm placeholder:text-[#6B6357]/50 focus:outline-none resize-none"
+                            />
+                          </div>
+                        )}
+
+                        {acompNaoConforme && !acompCritico && (
+                          <div className="mt-3 border border-[#1C1A17]/30 bg-[#F4F7FA] p-3">
+                            <p className="font-ui text-sm text-[#6B6357]">
+                              Razão acima de 3,0. Indica que mais refeições de acompanhante foram servidas do que o esperado. Considere registrar uma observação abaixo.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     <button
                       onClick={() => toggleObs(item.art)}
                       className="font-mono-label text-[11px] text-[#6B6357] uppercase tracking-wide mt-3 underline decoration-dotted hover:text-[#1C1A17]"
@@ -1079,7 +1550,7 @@ function AbaChecklist() {
                         onChange={(e) => setObs(item.art, e.target.value)}
                         placeholder="Registre evidências, números ou ressalvas relevantes para este item..."
                         rows={2}
-                        className="w-full mt-2 bg-[#EDE7D9] border border-[#1C1A17]/40 p-3 font-ui text-sm placeholder:text-[#6B6357]/50 focus:outline-none focus:border-[#8B7355] resize-none"
+                        className="w-full mt-2 bg-[#F4F7FA] border border-[#1C1A17]/40 p-3 font-ui text-sm placeholder:text-[#6B6357]/50 focus:outline-none focus:border-[#3D5A73] resize-none"
                       />
                     )}
                   </div>
@@ -1109,7 +1580,7 @@ function AbaChecklist() {
           })}
         </section>
 
-        <section className="mt-8 border-2 border-[#1C1A17] bg-[#1C1A17] text-[#EDE7D9] p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+        <section className="mt-8 border-2 border-[#1C1A17] bg-[#1C3A5A] text-white p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
           <div className="flex gap-6 font-mono-label text-xs">
             <div>
               <p className="text-[#EDE7D9]/50 uppercase tracking-wider mb-1">Conforme</p>
@@ -1128,7 +1599,7 @@ function AbaChecklist() {
           <div className="flex items-center gap-3">
             {!podeEnviar && (
               <span className="font-mono-label text-[11px] text-[#EDE7D9]/50 max-w-xs text-right">
-                {mensagemPendencia({ progresso, responsavel, percentualPreenchido, justificativaBiometriaCompleta })}
+                {mensagemPendencia({ progresso, responsavel, percentualPreenchido, justificativaBiometriaCompleta, lanchePreenchido, justificativaLancheCompleta, acompPreenchido, justificativaAcompCompleta })}
               </span>
             )}
             <button
@@ -1150,7 +1621,7 @@ function AbaChecklist() {
       {showSummary && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: "rgba(31,27,22,0.85)" }} onClick={() => setShowSummary(false)}>
           <div className="border-2 border-[#1C1A17] max-w-lg w-full max-h-[85vh] overflow-y-auto shadow-2xl" style={{ backgroundColor: "#FAF7EF" }} onClick={(e) => e.stopPropagation()}>
-            <div className="border-b-2 border-[#1C1A17] px-6 py-4" style={{ backgroundColor: "#FAF7EF" }}>
+            <div className="border-b-2 border-[#E2E8F0] px-6 py-4" style={{ backgroundColor: "#FAF7EF" }}>
               <p className="font-mono-label text-[11px] uppercase tracking-wider text-[#6B6357]">Resumo da verificação</p>
               <h3 className="font-ui font-semibold text-lg mt-1">
                 {hospitalAtual.nome} — {MESES[mesRef]}/{anoRef}
@@ -1166,7 +1637,7 @@ function AbaChecklist() {
                   const cfg = statusConfig(status);
                   const Icon = cfg?.icon;
                   return (
-                    <div key={item.art} className="flex items-start gap-3 border-b border-[#1C1A17]/15 pb-3">
+                    <div key={item.art} className="flex items-start gap-3 border-b border-[#E2E8F0] pb-3">
                       <span className="font-mono-label text-sm text-[#8B7355] w-6">{romanize(idx)}</span>
                       <div className="flex-1">
                         <p className="font-ui text-sm font-medium">{item.titulo}</p>
@@ -1202,7 +1673,7 @@ function AbaChecklist() {
               </div>
             </div>
             {confirmado ? (
-              <div className="border-t-2 border-[#1C1A17] px-6 py-5 flex items-center gap-4" style={{ backgroundColor: "#1F5A4A" }}>
+              <div className="border-t border-[#E2E8F0] px-6 py-5 flex items-center gap-4" style={{ backgroundColor: "#1F5A4A" }}>
                 <CarimboCGE size={40} className="text-[#FAF7EF] flex-shrink-0" />
                 <div>
                   <p className="font-ui text-sm font-semibold text-[#FAF7EF]">Verificação mensal concluída</p>
@@ -1212,7 +1683,7 @@ function AbaChecklist() {
                 </div>
               </div>
             ) : (
-              <div className="border-t-2 border-[#1C1A17] px-6 py-4 flex items-center justify-end gap-3" style={{ backgroundColor: "#FAF7EF" }}>
+              <div className="border-t border-[#E2E8F0] px-6 py-4 flex items-center justify-end gap-3" style={{ backgroundColor: "#FAF7EF" }}>
                 <button
                   onClick={() => setShowSummary(false)}
                   className="font-ui text-sm px-4 py-2 border-2 border-[#1C1A17] hover:bg-[#1C1A17] hover:text-[#FAF7EF] transition-colors"
@@ -1242,8 +1713,8 @@ function MatrizUltimoMes() {
   const labelMes = HISTORICO_MOCK[HOSPITAIS[0].sigla][ultimoIdx]?.label;
 
   return (
-    <section className="border-2 border-[#1C1A17] bg-[#FAF7EF]">
-      <div className="border-b-2 border-[#1C1A17] px-6 py-3 flex items-center justify-between flex-wrap gap-3">
+    <section className="bg-white border border-[#E2E8F0] rounded-xl">
+      <div className="border-b-2 border-[#E2E8F0] px-6 py-3 flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-2">
           <ClipboardList size={16} />
           <h2 className="font-ui text-sm font-semibold uppercase tracking-wide">
@@ -1258,7 +1729,7 @@ function MatrizUltimoMes() {
       <div className="overflow-x-auto p-6 pt-4">
         <table className="w-full text-sm font-ui min-w-[760px]">
           <thead>
-            <tr className="border-b-2 border-[#1C1A17]">
+            <tr className="border-b-2 border-[#E2E8F0]">
               <th className="text-left font-mono-label text-[11px] uppercase tracking-wide px-3 py-2 sticky left-0 bg-[#FAF7EF]">
                 Ponto de controle
               </th>
@@ -1274,7 +1745,7 @@ function MatrizUltimoMes() {
           </thead>
           <tbody>
             {ARTIGOS.map((item, idx) => (
-              <tr key={item.art} className="border-b border-[#1C1A17]/15">
+              <tr key={item.art} className="border-b border-[#E2E8F0]">
                 <td className="px-3 py-2.5 sticky left-0 bg-[#FAF7EF]">
                   <div className="flex items-center gap-2">
                     <span className="font-mono-label text-[#8B7355] text-sm">{romanize(idx)}</span>
@@ -1308,6 +1779,107 @@ function MatrizUltimoMes() {
             ))}
           </tbody>
         </table>
+      </div>
+    </section>
+  );
+}
+
+// ---------- Tabela de indicadores de proporção (lanche e acompanhante) por hospital x mês ----------
+function TabelaProporcoesHospitais() {
+  const meses = HISTORICO_MOCK[HOSPITAIS[0].sigla].map((m) => m.label);
+
+  function corRazaoLanche(v) {
+    if (v === null || v === undefined) return { cor: "#6B6357", bg: "transparent" };
+    if (v <= 1.0) return { cor: "#1F5A4A", bg: "#1F5A4A18" };
+    if (v <= 1.1) return { cor: "#A13D2B", bg: "transparent" };
+    return { cor: "#A13D2B", bg: "#A13D2B14" };
+  }
+
+  function corRazaoAcomp(v) {
+    if (v === null || v === undefined) return { cor: "#6B6357", bg: "transparent" };
+    if (v <= 3.0) return { cor: "#1F5A4A", bg: "#1F5A4A18" };
+    if (v <= 3.3) return { cor: "#A13D2B", bg: "transparent" };
+    return { cor: "#A13D2B", bg: "#A13D2B14" };
+  }
+
+  return (
+    <section className="bg-white border border-[#E2E8F0] rounded-xl">
+      <div className="border-b-2 border-[#E2E8F0] px-6 py-3 flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-2">
+          <BarChart3 size={16} />
+          <h2 className="font-ui text-sm font-semibold uppercase tracking-wide">Indicadores de proporção — série histórica</h2>
+        </div>
+        <div className="flex items-center gap-4 font-mono-label text-[10px] text-[#6B6357]">
+          <span><span className="inline-block w-2 h-2 rounded-full mr-1" style={{ backgroundColor: "#1F5A4A" }} />Conforme</span>
+          <span><span className="inline-block w-2 h-2 rounded-full mr-1 bg-[#A13D2B]" />Não conforme</span>
+        </div>
+      </div>
+
+      <div className="overflow-x-auto p-6">
+        <table className="w-full text-sm font-ui min-w-[700px] border-collapse">
+          <thead>
+            <tr className="bg-[#1C3A5A] text-white">
+              <th className="text-left font-mono-label text-[11px] uppercase tracking-wide px-3 py-2.5 sticky left-0 bg-[#1C1A17] w-20">Hospital</th>
+              <th className="text-left font-mono-label text-[11px] uppercase tracking-wide px-3 py-2.5 w-36">Indicador</th>
+              {meses.map((m) => (
+                <th key={m} className="text-center font-mono-label text-[11px] uppercase tracking-wide px-2 py-2.5 whitespace-nowrap">{m}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {HOSPITAIS.map((h, hIdx) => {
+              const dadosMes = HISTORICO_MOCK[h.sigla];
+              return (
+                <>
+                  {/* Linha 1: lanche/paciente */}
+                  <tr key={`${h.sigla}-lanche`} className={hIdx % 2 === 0 ? "bg-[#FAF7EF]" : "bg-slate-50"}>
+                    <td
+                      rowSpan={2}
+                      className="px-3 py-2 font-mono-label text-xs font-semibold border-r border-[#E2E8F0] align-middle sticky left-0"
+                      style={{ backgroundColor: hIdx % 2 === 0 ? "#FAF7EF" : "#EDE7D920", color: h.cor, borderLeft: `4px solid ${h.cor}` }}
+                    >
+                      {h.sigla}
+                    </td>
+                    <td className="px-3 py-2 font-mono-label text-[10px] text-[#6B6357] uppercase tracking-wide border-r border-[#1C1A17]/10 whitespace-nowrap">
+                      Lanche / paciente
+                    </td>
+                    {dadosMes.map((m) => {
+                      const { cor, bg } = corRazaoLanche(m.razaoLanche);
+                      return (
+                        <td key={m.label} className="text-center px-2 py-2" style={{ backgroundColor: bg }}>
+                          <span className="font-mono-label text-xs font-semibold" style={{ color: cor }}>
+                            {m.razaoLanche != null ? m.razaoLanche.toFixed(2) : "—"}
+                          </span>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                  {/* Linha 2: acomp/paciente */}
+                  <tr key={`${h.sigla}-acomp`} className={`border-b-2 border-[#E2E8F0]/20 ${hIdx % 2 === 0 ? "bg-[#FAF7EF]" : "bg-slate-50"}`}>
+                    <td className="px-3 py-2 font-mono-label text-[10px] text-[#6B6357] uppercase tracking-wide border-r border-[#1C1A17]/10 whitespace-nowrap">
+                      Acomp. / paciente
+                    </td>
+                    {dadosMes.map((m) => {
+                      const { cor, bg } = corRazaoAcomp(m.razaoAcomp);
+                      return (
+                        <td key={m.label} className="text-center px-2 py-2" style={{ backgroundColor: bg }}>
+                          <span className="font-mono-label text-xs font-semibold" style={{ color: cor }}>
+                            {m.razaoAcomp != null ? m.razaoAcomp.toFixed(2) : "—"}
+                          </span>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                </>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="border-t border-[#1C1A17]/15 px-6 py-3 font-mono-label text-[10px] text-[#6B6357] flex flex-wrap gap-6">
+        <span>Lanche/paciente: meta <strong className="text-[#1C1A17]">≤ 1,0</strong> · crítico <strong className="text-[#A13D2B]">&gt; 1,1</strong></span>
+        <span>Acomp./paciente: meta <strong className="text-[#1C1A17]">≤ 3,0</strong> · crítico <strong className="text-[#A13D2B]">&gt; 3,3</strong></span>
       </div>
     </section>
   );
@@ -1347,13 +1919,13 @@ function TelaPainel({ onVoltar }) {
   const hospitaisParaGraficos = HOSPITAIS.filter((h) => hospitaisVisiveis.has(h.sigla) || h.sigla === hospital);
 
   return (
-    <div className="min-h-screen bg-[#EDE7D9] text-[#1C1A17]" style={{ fontFamily: "'Fraunces', Georgia, serif" }}>
+    <div className="min-h-screen bg-[#F4F7FA] text-[#1C1A17]" style={{ fontFamily: "'Fraunces', Georgia, serif" }}>
       <FontesGlobais />
       <BarraTopo titulo="Painel de acompanhamento" onVoltar={onVoltar} />
 
       <main className="max-w-5xl mx-auto px-6 py-10 space-y-10">
         {/* Filtro de hospitais nos gráficos comparativos */}
-        <section className="border-2 border-[#1C1A17] bg-[#FAF7EF] p-4">
+        <section className="bg-white border border-[#E2E8F0] rounded-xl p-4">
           <p className="font-mono-label text-[11px] uppercase tracking-wider text-[#6B6357] mb-3">
             Hospitais nos gráficos comparativos — <span className="text-[#1C1A17] font-semibold">{hospital}</span> é fixo
           </p>
@@ -1399,7 +1971,10 @@ function TelaPainel({ onVoltar }) {
           onSelecionarPonto={selecionarEAjustar(setPontoBiometria)}
         />
 
-        {/* 3. Economia */}
+        {/* 3. Tabela de indicadores de proporção */}
+        <TabelaProporcoesHospitais />
+
+        {/* 4. Economia */}
         <BlocoGraficoEconomia
           hospital={hospital}
           hospitaisFiltrados={hospitaisParaGraficos}
@@ -1418,7 +1993,7 @@ function TelaPainel({ onVoltar }) {
               <select
                 value={hospital}
                 onChange={(e) => setHospital(e.target.value)}
-                className="appearance-none bg-[#FAF7EF] border-2 border-[#1C1A17] py-2 pl-3 pr-8 font-ui text-sm focus:outline-none focus:border-[#8B7355]"
+                className="appearance-none bg-[#FAF7EF] border-2 border-[#1C1A17] py-2 pl-3 pr-8 font-ui text-sm focus:outline-none focus:border-[#3D5A73]"
               >
                 {HOSPITAIS.map((h) => (
                   <option key={h.sigla} value={h.sigla}>{h.sigla} — {h.nome}</option>
@@ -1428,10 +2003,10 @@ function TelaPainel({ onVoltar }) {
             </div>
           </div>
 
-          <div className="border-2 border-[#1C1A17] bg-[#FAF7EF] overflow-x-auto">
+          <div className="bg-white border border-[#E2E8F0] rounded-xl overflow-x-auto">
             <table className="w-full text-sm font-ui min-w-[900px]">
               <thead>
-                <tr className="border-b-2 border-[#1C1A17] bg-[#1C1A17] text-[#EDE7D9]">
+                <tr className="border-b border-[#1C3A5A]/20 bg-[#1C3A5A] text-white">
                   <th className="text-left font-mono-label text-[11px] uppercase tracking-wide px-4 py-3 sticky left-0 bg-[#1C1A17]">Artigo</th>
                   {mesesChecklist.map((m) => (
                     <th key={m.label} className="text-center font-mono-label text-[11px] uppercase tracking-wide px-3 py-3 whitespace-nowrap">
@@ -1442,7 +2017,7 @@ function TelaPainel({ onVoltar }) {
               </thead>
               <tbody>
                 {ARTIGOS.map((item, idx) => (
-                  <tr key={item.art} className="border-b border-[#1C1A17]/15">
+                  <tr key={item.art} className="border-b border-[#E2E8F0]">
                     <td className="px-4 py-2.5 sticky left-0 bg-[#FAF7EF]">
                       <div className="flex items-center gap-2">
                         <span className="font-mono-label text-[#8B7355] text-sm">{romanize(idx)}</span>
@@ -1509,8 +2084,8 @@ function BlocoGraficoICA({ hospital, hospitaisFiltrados, ponto, onSelecionarPont
   const hospInfo = ponto ? HOSPITAIS.find((h) => h.sigla === ponto.sigla) : null;
 
   return (
-    <section className="border-2 border-[#1C1A17] bg-[#FAF7EF]">
-      <div className="border-b-2 border-[#1C1A17] px-6 py-3 flex items-center justify-between flex-wrap gap-3">
+    <section className="bg-white border border-[#E2E8F0] rounded-xl">
+      <div className="border-b-2 border-[#E2E8F0] px-6 py-3 flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-2">
           <BarChart3 size={16} />
           <h2 className="font-ui text-sm font-semibold uppercase tracking-wide">
@@ -1537,7 +2112,7 @@ function BlocoGraficoICA({ hospital, hospitaisFiltrados, ponto, onSelecionarPont
       </div>
 
       {dado ? (
-        <div className="border-t-2 border-[#1C1A17] p-6 bg-[#EDE7D9]">
+        <div className="border-t border-[#E2E8F0] p-6 bg-[#F4F7FA]">
           <div className="flex items-baseline gap-2 flex-wrap mb-2">
             <span className="font-mono-label text-[11px] uppercase tracking-wider px-2 py-1 border-2" style={{ borderColor: hospInfo.cor, color: hospInfo.cor }}>
               {hospInfo.sigla}
@@ -1550,7 +2125,7 @@ function BlocoGraficoICA({ hospital, hospitaisFiltrados, ponto, onSelecionarPont
           </p>
         </div>
       ) : (
-        <div className="border-t-2 border-[#1C1A17] p-6 bg-[#EDE7D9]">
+        <div className="border-t border-[#E2E8F0] p-6 bg-[#F4F7FA]">
           <p className="font-ui text-sm text-[#6B6357]">Selecione um ponto para ver o detalhamento do índice naquele mês.</p>
         </div>
       )}
@@ -1564,8 +2139,8 @@ function BlocoGraficoBiometria({ hospital, hospitaisFiltrados, ponto, onSelecion
   const hospInfo = ponto ? HOSPITAIS.find((h) => h.sigla === ponto.sigla) : null;
 
   return (
-    <section className="border-2 border-[#1C1A17] bg-[#FAF7EF]">
-      <div className="border-b-2 border-[#1C1A17] px-6 py-3 flex items-center justify-between flex-wrap gap-3">
+    <section className="bg-white border border-[#E2E8F0] rounded-xl">
+      <div className="border-b-2 border-[#E2E8F0] px-6 py-3 flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-2">
           <BarChart3 size={16} />
           <h2 className="font-ui text-sm font-semibold uppercase tracking-wide">
@@ -1596,7 +2171,7 @@ function BlocoGraficoBiometria({ hospital, hospitaisFiltrados, ponto, onSelecion
       </div>
 
       {dado ? (
-        <div className="border-t-2 border-[#1C1A17] p-6 bg-[#EDE7D9]">
+        <div className="border-t border-[#E2E8F0] p-6 bg-[#F4F7FA]">
           <div className="flex items-baseline gap-2 flex-wrap mb-3">
             <span className="font-mono-label text-[11px] uppercase tracking-wider px-2 py-1 border-2" style={{ borderColor: hospInfo.cor, color: hospInfo.cor }}>
               {hospInfo.sigla}
@@ -1626,7 +2201,7 @@ function BlocoGraficoBiometria({ hospital, hospitaisFiltrados, ponto, onSelecion
           )}
         </div>
       ) : (
-        <div className="border-t-2 border-[#1C1A17] p-6 bg-[#EDE7D9]">
+        <div className="border-t border-[#E2E8F0] p-6 bg-[#F4F7FA]">
           <p className="font-ui text-sm text-[#6B6357]">Selecione um ponto no gráfico para ver o percentual apurado e a justificativa daquele mês.</p>
         </div>
       )}
@@ -1728,8 +2303,8 @@ function BlocoGraficoEconomia({ hospital, hospitaisFiltrados, ponto, onSeleciona
   }));
 
   return (
-    <section className="border-2 border-[#1C1A17] bg-[#FAF7EF]">
-      <div className="border-b-2 border-[#1C1A17] px-6 py-3 flex items-center justify-between flex-wrap gap-3">
+    <section className="bg-white border border-[#E2E8F0] rounded-xl">
+      <div className="border-b-2 border-[#E2E8F0] px-6 py-3 flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-2">
           <BarChart3 size={16} />
           <h2 className="font-ui text-sm font-semibold uppercase tracking-wide">
@@ -1753,7 +2328,7 @@ function BlocoGraficoEconomia({ hospital, hospitaisFiltrados, ponto, onSeleciona
       </div>
 
       {dado ? (
-        <div className="border-t-2 border-[#1C1A17] p-6 bg-[#EDE7D9]">
+        <div className="border-t border-[#E2E8F0] p-6 bg-[#F4F7FA]">
           <div className="flex items-baseline gap-2 flex-wrap">
             <span className="font-mono-label text-[11px] uppercase tracking-wider px-2 py-1 border-2" style={{ borderColor: hospInfo.cor, color: hospInfo.cor }}>
               {hospInfo.sigla}
@@ -1765,13 +2340,13 @@ function BlocoGraficoEconomia({ hospital, hospitaisFiltrados, ponto, onSeleciona
           </div>
         </div>
       ) : (
-        <div className="border-t-2 border-[#1C1A17] p-6 bg-[#EDE7D9]">
+        <div className="border-t border-[#E2E8F0] p-6 bg-[#F4F7FA]">
           <p className="font-ui text-sm text-[#6B6357]">Selecione uma barra para ver a economia ou prejuízo apurado naquele mês.</p>
         </div>
       )}
 
       {/* Acumulado do período: uma barra por hospital com o total somado de todos os meses */}
-      <div className="border-t-2 border-[#1C1A17] p-6">
+      <div className="border-t border-[#E2E8F0] p-6">
         <p className="font-mono-label text-[11px] uppercase tracking-wider text-[#6B6357] mb-3">
           Economia acumulada no período — total de todos os meses, por hospital
         </p>
@@ -1866,7 +2441,32 @@ function AbaInserirConsumo() {
     return inicial;
   });
 
-  const referenciaHospital = REFERENCIA_MOCK[hospital];
+  // Referência de quantidade editável e histórico de versões, por hospital.
+  // referenciaEditavel: { [sigla]: { [tipo]: { [catId]: number } } } — começa do mock, editável
+  // historicoReferencia: { [sigla]: [ { data, responsavel, memoria, quantidades } ] }
+  const [referenciaEditavel, setReferenciaEditavel] = useState(() => {
+    const inicial = {};
+    HOSPITAIS.forEach((h) => { inicial[h.sigla] = JSON.parse(JSON.stringify(REFERENCIA_MOCK[h.sigla])); });
+    return inicial;
+  });
+  const [historicoReferencia, setHistoricoReferencia] = useState(() => {
+    const inicial = {};
+    HOSPITAIS.forEach((h) => { inicial[h.sigla] = []; });
+    return inicial;
+  });
+
+  function salvarReferencia(sigla, novasQuantidades, memoria, responsavel) {
+    setReferenciaEditavel((prev) => ({ ...prev, [sigla]: novasQuantidades }));
+    setHistoricoReferencia((prev) => ({
+      ...prev,
+      [sigla]: [
+        { data: new Date().toISOString(), responsavel, memoria, quantidades: JSON.parse(JSON.stringify(novasQuantidades)) },
+        ...prev[sigla],
+      ],
+    }));
+  }
+
+  const referenciaHospital = referenciaEditavel[hospital];
   const realizadoHospital = realizadoPorHospital[hospital];
   const mesesCadastradosHospital = mesesCadastrados[hospital];
 
@@ -1890,7 +2490,7 @@ function AbaInserirConsumo() {
     <main className="max-w-6xl mx-auto px-6 py-10">
         {/* Seletor de hospital + abas */}
         <div className="flex items-center justify-between flex-wrap gap-4 mb-6">
-          <div className="flex border-2 border-[#1C1A17] flex-wrap">
+          <div className="flex border border-[#E2E8F0] rounded-lg overflow-hidden flex-wrap bg-white">
             {[
               { id: "cadastro", label: "Cadastro do realizado" },
               { id: "referencia", label: "Referência de quantidade" },
@@ -1900,7 +2500,7 @@ function AbaInserirConsumo() {
                 key={t.id}
                 onClick={() => setAba(t.id)}
                 className={`font-ui text-sm px-4 py-2.5 transition-colors ${i > 0 ? "border-l-2 border-[#1C1A17]" : ""}
-                  ${aba === t.id ? "bg-[#1C1A17] text-[#EDE7D9]" : "bg-[#FAF7EF] text-[#1C1A17] hover:bg-[#E5DCC8]"}`}
+                  ${aba === t.id ? "bg-[#1C3A5A] text-white" : "bg-[#FAF7EF] text-[#1C1A17] hover:bg-slate-100"}`}
               >
                 {t.label}
               </button>
@@ -1912,7 +2512,14 @@ function AbaInserirConsumo() {
           </p>
         </div>
 
-        {aba === "referencia" && <PainelReferencia referencia={referenciaHospital} />}
+        {aba === "referencia" && (
+          <PainelReferencia
+            hospital={hospital}
+            referencia={referenciaHospital}
+            historico={historicoReferencia[hospital]}
+            onSalvar={(novasQtds, memoria, responsavel) => salvarReferencia(hospital, novasQtds, memoria, responsavel)}
+          />
+        )}
         {aba === "custo" && <PainelCusto />}
         {aba === "cadastro" && (
           <PainelCadastroRealizado
@@ -1932,52 +2539,202 @@ function AbaInserirConsumo() {
   );
 }
 
-function PainelReferencia({ referencia }) {
+function PainelReferencia({ hospital, referencia, historico, onSalvar }) {
+  const [modoEdicao, setModoEdicao] = useState(false);
+  const [rascunho, setRascunho] = useState(null); // cópia editável durante edição
+  const [memoria, setMemoria] = useState("");
+  const [responsavel, setResponsavel] = useState("");
+
+  function iniciarEdicao() {
+    setRascunho(JSON.parse(JSON.stringify(referencia)));
+    setMemoria("");
+    setResponsavel("");
+    setModoEdicao(true);
+  }
+
+  function cancelarEdicao() {
+    setModoEdicao(false);
+    setRascunho(null);
+    setMemoria("");
+    setResponsavel("");
+  }
+
+  function atualizarCelula(tipo, catId, valor) {
+    setRascunho((prev) => ({
+      ...prev,
+      [tipo]: { ...prev[tipo], [catId]: Number(valor) || 0 },
+    }));
+  }
+
+  function salvar() {
+    onSalvar(rascunho, memoria, responsavel);
+    setModoEdicao(false);
+    setRascunho(null);
+    setMemoria("");
+    setResponsavel("");
+  }
+
+  const dados = modoEdicao ? rascunho : referencia;
+  const podeSalvar = memoria.trim().length > 0 && responsavel.trim().length > 0;
+
   return (
-    <section className="border-2 border-[#1C1A17] bg-[#FAF7EF]">
-      <div className="border-b-2 border-[#1C1A17] px-6 py-3 flex items-center gap-2">
-        <Lock size={16} />
-        <h2 className="font-ui text-sm font-semibold uppercase tracking-wide">Quantidade de referência (travada)</h2>
-      </div>
-      <p className="font-ui text-sm text-[#2B2723] px-6 pt-4 max-w-2xl">
-        Base mensal fixa de quantidade de refeições por tipo e categoria, usada como referência para o
-        cálculo da economia. Uma vez travada, só deve ser alterada por decisão formal da gestão.
-      </p>
-      <div className="overflow-x-auto p-6 pt-4">
-        <table className="w-full text-sm font-ui min-w-[640px]">
-          <thead>
-            <tr className="border-b-2 border-[#1C1A17]">
-              <th className="text-left font-mono-label text-[11px] uppercase tracking-wide px-3 py-2">Tipo de refeição</th>
-              {CATEGORIAS_PUBLICO.map((cat) => (
-                <th key={cat.id} className="text-center font-mono-label text-[11px] uppercase tracking-wide px-3 py-2">{cat.label}</th>
-              ))}
-              <th className="text-center font-mono-label text-[11px] uppercase tracking-wide px-3 py-2">Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {TIPOS_REFEICAO.map((tipo) => {
-              const totalLinha = CATEGORIAS_PUBLICO.reduce((acc, cat) => acc + referencia[tipo][cat.id], 0);
-              return (
-                <tr key={tipo} className="border-b border-[#1C1A17]/15">
-                  <td className="px-3 py-2.5 font-medium">{tipo}</td>
-                  {CATEGORIAS_PUBLICO.map((cat) => (
-                    <td key={cat.id} className="text-center px-3 py-2.5 font-mono-label">{referencia[tipo][cat.id]}</td>
-                  ))}
-                  <td className="text-center px-3 py-2.5 font-mono-label font-semibold">{totalLinha}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    </section>
+    <div className="space-y-6">
+      <section className="bg-white border border-[#E2E8F0] rounded-xl">
+        {/* Cabeçalho */}
+        <div className="border-b-2 border-[#E2E8F0] px-6 py-3 flex items-center justify-between flex-wrap gap-3">
+          <div className="flex items-center gap-2">
+            <FileText size={16} />
+            <h2 className="font-ui text-sm font-semibold uppercase tracking-wide">
+              Quantidade de referência — {hospital}
+            </h2>
+          </div>
+          {!modoEdicao ? (
+            <button
+              onClick={iniciarEdicao}
+              className="flex items-center gap-1.5 font-mono-label text-[11px] uppercase tracking-wide px-3 py-2 border-2 border-[#8B7355] text-[#8B7355] hover:bg-[#8B7355] hover:text-[#FAF7EF] transition-colors"
+            >
+              <Pencil size={12} /> Editar referência
+            </button>
+          ) : (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={cancelarEdicao}
+                className="font-mono-label text-[11px] uppercase tracking-wide px-3 py-2 border border-[#CBD5E1] text-[#6B6357] hover:border-[#1C1A17] transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={salvar}
+                disabled={!podeSalvar}
+                className="font-mono-label text-[11px] uppercase tracking-wide px-3 py-2 border-2 transition-colors"
+                style={podeSalvar
+                  ? { backgroundColor: "#1F5A4A", borderColor: "#1F5A4A", color: "#FAF7EF" }
+                  : { backgroundColor: "transparent", borderColor: "#1C1A17/20", color: "#6B6357", cursor: "not-allowed" }}
+              >
+                Salvar alterações
+              </button>
+            </div>
+          )}
+        </div>
+
+        {modoEdicao && (
+          <div className="bg-[#8B7355]/10 border-b-2 border-[#8B7355]/30 px-6 py-3">
+            <p className="font-ui text-xs text-[#6B6357]">
+              Modo de edição ativo — altere os valores na tabela abaixo e preencha a memória de cálculo antes de salvar.
+            </p>
+          </div>
+        )}
+
+        {/* Tabela */}
+        <div className="overflow-x-auto p-6 pt-4">
+          <table className="w-full text-sm font-ui min-w-[640px]">
+            <thead>
+              <tr className="border-b-2 border-[#E2E8F0]">
+                <th className="text-left font-mono-label text-[11px] uppercase tracking-wide px-3 py-2">Tipo de refeição</th>
+                {CATEGORIAS_PUBLICO.map((cat) => (
+                  <th key={cat.id} className="text-center font-mono-label text-[11px] uppercase tracking-wide px-3 py-2">{cat.label}</th>
+                ))}
+                <th className="text-center font-mono-label text-[11px] uppercase tracking-wide px-3 py-2">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {TIPOS_REFEICAO.map((tipo) => {
+                const totalLinha = CATEGORIAS_PUBLICO.reduce((acc, cat) => acc + (dados[tipo][cat.id] || 0), 0);
+                return (
+                  <tr key={tipo} className="border-b border-[#E2E8F0]">
+                    <td className="px-3 py-2.5 font-medium">{tipo}</td>
+                    {CATEGORIAS_PUBLICO.map((cat) => (
+                      <td key={cat.id} className="text-center px-3 py-2">
+                        {modoEdicao ? (
+                          <input
+                            type="number"
+                            min="0"
+                            value={dados[tipo][cat.id]}
+                            onChange={(e) => atualizarCelula(tipo, cat.id, e.target.value)}
+                            className="w-20 text-center bg-[#F4F7FA] border-2 border-[#8B7355] py-1 px-1 font-mono-label text-sm focus:outline-none focus:border-[#1C1A17]"
+                          />
+                        ) : (
+                          <span className="font-mono-label">{dados[tipo][cat.id]}</span>
+                        )}
+                      </td>
+                    ))}
+                    <td className="text-center px-3 py-2.5 font-mono-label font-semibold">{totalLinha}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Campos de memória de cálculo + responsável (só no modo edição) */}
+        {modoEdicao && (
+          <div className="border-t-2 border-[#8B7355]/30 px-6 py-5 space-y-4 bg-[#8B7355]/5">
+            <div>
+              <label className="font-mono-label text-[11px] uppercase tracking-wider text-[#6B6357] block mb-1.5">
+                Responsável pela alteração <span className="text-[#A13D2B]">*</span>
+              </label>
+              <input
+                type="text"
+                value={responsavel}
+                onChange={(e) => setResponsavel(e.target.value)}
+                placeholder="Nome e cargo"
+                className="w-full max-w-sm bg-[#F4F7FA] border border-[#CBD5E1] focus:border-[#3D5A73] py-2 px-3 font-ui text-sm focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="font-mono-label text-[11px] uppercase tracking-wider text-[#6B6357] block mb-1.5">
+                Memória de cálculo — justificativa da alteração <span className="text-[#A13D2B]">*</span>
+              </label>
+              <p className="font-ui text-xs text-[#6B6357] mb-2">
+                Descreva a origem e o critério desta referência — média dos últimos meses, ampliação de leitos, nova fatura, decisão formal, etc.
+              </p>
+              <textarea
+                value={memoria}
+                onChange={(e) => setMemoria(e.target.value)}
+                placeholder="Ex.: Tomou-se como base a média das faturas dos últimos 12 meses (jan–dez/2024), corrigida em 8% para refletir ampliação de 15 leitos no bloco cirúrgico a partir de jan/2025. Processo SEI nº 00000.000000/2025-00."
+                rows={4}
+                className="w-full max-w-3xl bg-[#F4F7FA] border border-[#CBD5E1] focus:border-[#3D5A73] p-3 font-ui text-sm placeholder:text-[#6B6357]/50 focus:outline-none resize-y"
+              />
+              {!podeSalvar && (
+                <p className="font-mono-label text-[10px] text-[#A13D2B] mt-1.5 flex items-center gap-1">
+                  <AlertTriangle size={10} /> Preencha o responsável e a memória de cálculo para salvar.
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* Histórico de versões */}
+      {historico.length > 0 && (
+        <section className="bg-white border border-[#E2E8F0] rounded-xl">
+          <div className="border-b-2 border-[#E2E8F0]/20 px-6 py-3 flex items-center gap-2">
+            <ClipboardList size={14} className="text-[#6B6357]" />
+            <h3 className="font-mono-label text-[11px] uppercase tracking-wider text-[#6B6357]">Histórico de alterações da referência</h3>
+          </div>
+          <div className="divide-y divide-[#1C1A17]/10">
+            {historico.map((versao, i) => (
+              <div key={i} className="px-6 py-4">
+                <div className="flex items-center gap-3 flex-wrap mb-2">
+                  <span className="font-mono-label text-[11px] text-[#6B6357]">
+                    {new Date(versao.data).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                  </span>
+                  <span className="font-mono-label text-[11px] font-semibold text-[#1C1A17]">{versao.responsavel}</span>
+                </div>
+                <p className="font-ui text-sm text-[#2B2723] max-w-2xl">{versao.memoria}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+    </div>
   );
 }
 
 function PainelCusto() {
   return (
-    <section className="border-2 border-[#1C1A17] bg-[#FAF7EF]">
-      <div className="border-b-2 border-[#1C1A17] px-6 py-3 flex items-center gap-2">
+    <section className="bg-white border border-[#E2E8F0] rounded-xl">
+      <div className="border-b-2 border-[#E2E8F0] px-6 py-3 flex items-center gap-2">
         <FileText size={16} />
         <h2 className="font-ui text-sm font-semibold uppercase tracking-wide">Histórico de custo unitário por tipo de refeição</h2>
       </div>
@@ -1987,8 +2744,8 @@ function PainelCusto() {
       </p>
       <div className="p-6 pt-4 space-y-6">
         {HISTORICO_CUSTO_MOCK.map((versao) => (
-          <div key={versao.id} className="border-2 border-[#1C1A17]/20">
-            <div className="bg-[#EDE7D9] border-b-2 border-[#1C1A17]/20 px-4 py-2 flex items-center justify-between flex-wrap gap-2">
+          <div key={versao.id} className="border border-[#E2E8F0] rounded-lg">
+            <div className="bg-[#F4F7FA] border-b-2 border-[#E2E8F0]/20 px-4 py-2 flex items-center justify-between flex-wrap gap-2">
               <span className="font-mono-label text-[11px] uppercase tracking-wide text-[#6B6357]">{versao.label}</span>
               <span className="font-mono-label text-[11px] text-[#6B6357]">
                 Início: {new Date(versao.vigenciaInicio).toLocaleDateString("pt-BR")}
@@ -1997,7 +2754,7 @@ function PainelCusto() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm font-ui min-w-[480px]">
                 <thead>
-                  <tr className="border-b border-[#1C1A17]/15">
+                  <tr className="border-b border-[#E2E8F0]">
                     {TIPOS_REFEICAO.map((tipo) => (
                       <th key={tipo} className="text-center font-mono-label text-[11px] uppercase tracking-wide px-3 py-2">{tipo}</th>
                     ))}
@@ -2080,8 +2837,8 @@ function PainelCadastroRealizado({ referencia, realizadoHospital, mesesCadastrad
     <div className="space-y-8">
       {/* Etapa 1: escolha do mês */}
       {etapa === "lista" && (
-        <section className="border-2 border-[#1C1A17] bg-[#FAF7EF]">
-          <div className="border-b-2 border-[#1C1A17] px-6 py-3 flex items-center gap-2">
+        <section className="bg-white border border-[#E2E8F0] rounded-xl">
+          <div className="border-b-2 border-[#E2E8F0] px-6 py-3 flex items-center gap-2">
             <ClipboardList size={16} />
             <h2 className="font-ui text-sm font-semibold uppercase tracking-wide">Lançamento mensal de refeições servidas</h2>
           </div>
@@ -2099,7 +2856,7 @@ function PainelCadastroRealizado({ referencia, realizadoHospital, mesesCadastrad
                     key={m.label}
                     onClick={() => setMesIdxEscolhaPendente(i)}
                     className={`font-mono-label text-xs px-3 py-2 border-2 transition-colors flex items-center gap-1.5
-                      ${i === mesIdxEscolhaPendente ? "bg-[#1C1A17] text-[#EDE7D9] border-[#1C1A17]" : "border-[#1C1A17]/30 text-[#2B2723] hover:border-[#1C1A17]"}`}
+                      ${i === mesIdxEscolhaPendente ? "bg-[#1C3A5A] text-white border-[#1C1A17]" : "border-[#1C1A17]/30 text-[#2B2723] hover:border-[#1C1A17]"}`}
                   >
                     {cadastrado && <Check size={12} className={i === mesIdxEscolhaPendente ? "text-[#7FBFA8]" : "text-[#1F5A4A]"} />}
                     {m.label}
@@ -2128,8 +2885,8 @@ function PainelCadastroRealizado({ referencia, realizadoHospital, mesesCadastrad
 
       {/* Etapa 2: formulário do mês escolhido */}
       {etapa === "formulario" && rascunho && (
-        <section className="border-2 border-[#1C1A17] bg-[#FAF7EF]">
-          <div className="border-b-2 border-[#1C1A17] px-6 py-3 flex items-center justify-between flex-wrap gap-3">
+        <section className="bg-white border border-[#E2E8F0] rounded-xl">
+          <div className="border-b-2 border-[#E2E8F0] px-6 py-3 flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-2">
               <ClipboardList size={16} />
               <h2 className="font-ui text-sm font-semibold uppercase tracking-wide">
@@ -2155,10 +2912,10 @@ function PainelCadastroRealizado({ referencia, realizadoHospital, mesesCadastrad
               </p>
             )}
 
-            <div className="overflow-x-auto border-2 border-[#1C1A17]/20">
+            <div className="overflow-x-auto border border-[#E2E8F0] rounded-lg">
               <table className="w-full text-sm font-ui min-w-[560px]">
                 <thead>
-                  <tr className="bg-[#EDE7D9] border-b-2 border-[#1C1A17]/20">
+                  <tr className="bg-[#F4F7FA] border-b-2 border-[#E2E8F0]/20">
                     <th className="text-left font-mono-label text-[11px] uppercase tracking-wide px-3 py-2">Tipo de refeição</th>
                     {CATEGORIAS_PUBLICO.map((cat) => (
                       <th key={cat.id} className="text-center font-mono-label text-[11px] uppercase tracking-wide px-3 py-2">{cat.label}</th>
@@ -2167,7 +2924,7 @@ function PainelCadastroRealizado({ referencia, realizadoHospital, mesesCadastrad
                 </thead>
                 <tbody>
                   {TIPOS_REFEICAO.map((tipo) => (
-                    <tr key={tipo} className="border-b border-[#1C1A17]/10">
+                    <tr key={tipo} className="border-b border-[#E2E8F0]">
                       <td className="px-3 py-2 text-xs font-medium">{tipo}</td>
                       {CATEGORIAS_PUBLICO.map((cat) => (
                         <td key={cat.id} className="text-center px-2 py-1.5">
@@ -2176,7 +2933,7 @@ function PainelCadastroRealizado({ referencia, realizadoHospital, mesesCadastrad
                             min="0"
                             value={rascunho[tipo][cat.id]}
                             onChange={(e) => atualizarRascunho(tipo, cat.id, e.target.value)}
-                            className="w-20 text-center bg-white border border-[#1C1A17]/30 font-mono-label text-sm py-1.5 focus:border-[#8B7355] focus:outline-none"
+                            className="w-20 text-center bg-white border border-[#1C1A17]/30 font-mono-label text-sm py-1.5 focus:border-[#3D5A73] focus:outline-none"
                           />
                         </td>
                       ))}
@@ -2209,8 +2966,8 @@ function PainelCadastroRealizado({ referencia, realizadoHospital, mesesCadastrad
       )}
 
       {/* Tabelão consolidado: categoria x tipo nas linhas, referência fixa + 1 coluna por mês */}
-      <section className="border-2 border-[#1C1A17] bg-[#FAF7EF]">
-        <div className="border-b-2 border-[#1C1A17] px-6 py-3 flex items-center gap-2">
+      <section className="bg-white border border-[#E2E8F0] rounded-xl">
+        <div className="border-b-2 border-[#E2E8F0] px-6 py-3 flex items-center gap-2">
           <FileText size={16} />
           <h2 className="font-ui text-sm font-semibold uppercase tracking-wide">Histórico consolidado</h2>
         </div>
@@ -2219,10 +2976,10 @@ function PainelCadastroRealizado({ referencia, realizadoHospital, mesesCadastrad
           <table className="w-full text-sm font-ui min-w-[920px] border-collapse">
             <thead>
               <tr>
-                <th className="text-left font-mono-label text-[11px] uppercase tracking-wide px-3 py-2 border-b-2 border-[#1C1A17] sticky left-0 bg-[#FAF7EF]">
+                <th className="text-left font-mono-label text-[11px] uppercase tracking-wide px-3 py-2 border-b-2 border-[#E2E8F0] sticky left-0 bg-[#FAF7EF]">
                   Categoria / Tipo de refeição
                 </th>
-                <th className="text-center font-mono-label text-[11px] uppercase tracking-wide px-3 py-2 border-b-2 border-l-2 border-[#1C1A17] bg-[#EDE7D9]">
+                <th className="text-center font-mono-label text-[11px] uppercase tracking-wide px-3 py-2 border-b-2 border-l-2 border-[#1C1A17] bg-[#F4F7FA]">
                   Referência
                 </th>
                 {realizadoHospital.map((m, i) => (
@@ -2238,15 +2995,15 @@ function PainelCadastroRealizado({ referencia, realizadoHospital, mesesCadastrad
             <tbody>
               {CATEGORIAS_PUBLICO.map((cat) => (
                 <React.Fragment key={cat.id}>
-                  <tr className="bg-[#1C1A17] text-[#EDE7D9]">
+                  <tr className="bg-[#1C3A5A] text-white">
                     <td colSpan={2 + realizadoHospital.length} className="px-3 py-1.5 font-ui text-xs font-semibold uppercase tracking-wide sticky left-0 bg-[#1C1A17]">
                       {cat.label}
                     </td>
                   </tr>
                   {TIPOS_REFEICAO.map((tipo) => (
-                    <tr key={cat.id + tipo} className="border-b border-[#1C1A17]/15">
+                    <tr key={cat.id + tipo} className="border-b border-[#E2E8F0]">
                       <td className="px-3 py-2 pl-6 text-xs text-[#2B2723] sticky left-0 bg-[#FAF7EF]">{tipo}</td>
-                      <td className="text-center px-3 py-2 font-mono-label text-xs border-l-2 border-[#1C1A17]/30 bg-[#EDE7D9] text-[#6B6357]">
+                      <td className="text-center px-3 py-2 font-mono-label text-xs border-l-2 border-[#1C1A17]/30 bg-[#F4F7FA] text-[#6B6357]">
                         {referencia[tipo][cat.id]}
                       </td>
                       {realizadoHospital.map((m, i) => (
@@ -2272,49 +3029,61 @@ function PainelCadastroRealizado({ referencia, realizadoHospital, mesesCadastrad
 
 function TelaHomeMedicamentos({ onIrPara, onVoltarProduto }) {
   return (
-    <div className="min-h-screen bg-[#EDE7D9] text-[#1C1A17] flex flex-col" style={{ fontFamily: "'Fraunces', Georgia, serif" }}>
+    <div className="min-h-screen bg-[#F4F7FA] flex flex-col" style={{ fontFamily: "'Fraunces', Georgia, serif" }}>
       <FontesGlobais />
-      <header className="border-b-2 border-[#1C1A17] bg-[#1C1A17] text-[#EDE7D9]">
-        <div className="max-w-3xl mx-auto px-6 py-5">
-          <div className="flex items-center justify-between gap-4 mb-4">
-            <button onClick={onVoltarProduto} className="text-[#EDE7D9]/70 hover:text-[#EDE7D9] transition-colors flex-shrink-0" aria-label="Voltar para seleção de produto">
+      <header className="bg-[#1C3A5A] text-white shadow-md">
+        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <button onClick={onVoltarProduto} className="text-white/70 hover:text-white transition-colors flex-shrink-0" aria-label="Voltar">
               <ArrowLeft size={18} />
             </button>
-            <LogosCabecalho alturaPE={26} alturaSCI={40} />
+            <img src={LOGO_PE_BASE64} alt="Governo de Pernambuco" style={{ height: 24 }} />
+            <div className="w-px h-6 bg-white/20" />
+            <div>
+              <p className="font-ui text-sm font-semibold leading-tight">Medicamentos</p>
+              <p className="font-mono-label text-[10px] text-white/60 uppercase tracking-wide">Controle Interno — SES-PE</p>
+            </div>
           </div>
-          <p className="font-display text-base font-medium leading-tight">Controladoria-Geral do Estado</p>
-          <p className="font-mono-label text-[11px] text-[#EDE7D9]/60 tracking-wide mt-1 uppercase">
-            Medicamentos — Controle de Estoques
-          </p>
+          <img src={LOGO_SCI_BASE64} alt="SCI" style={{ height: 30 }} />
         </div>
       </header>
 
-      <main className="flex-1 max-w-3xl mx-auto px-6 py-14 w-full">
-        <p className="font-mono-label text-[11px] uppercase tracking-wider text-[#6B6357] mb-2">O que você deseja fazer?</p>
-        <h1 className="font-display text-2xl font-medium mb-10">Selecione uma ação</h1>
+      <main className="flex-1 flex items-center justify-center px-6 py-10">
+        <div className="max-w-3xl w-full">
+          <p className="font-mono-label text-[11px] uppercase tracking-[0.18em] text-[#6B7A8D] mb-2">O que você deseja fazer?</p>
+          <h1 className="font-display text-3xl font-bold mb-8" style={{ color: "#1C3A5A" }}>Selecione uma ação</h1>
 
-        <div className="grid sm:grid-cols-2 gap-5">
-          <button
-            onClick={() => onIrPara("monitoramentoMedicamentos")}
-            className="text-left border-2 border-[#1C1A17] bg-[#FAF7EF] p-6 hover:bg-[#1C1A17] hover:text-[#FAF7EF] transition-colors group"
-          >
-            <ClipboardList size={28} className="mb-4 text-[#8B7355]" />
-            <p className="font-display text-lg font-medium mb-2">Realizar monitoramento</p>
-            <p className="font-ui text-sm opacity-80 leading-relaxed">
-              Monitorar estoques: registrar inventários realizados e testes de acurácia por estoque.
-            </p>
-          </button>
+          <div className="grid sm:grid-cols-2 gap-5">
+            <button
+              onClick={() => onIrPara("monitoramentoMedicamentos")}
+              className="text-left bg-white rounded-2xl p-6 hover:shadow-xl hover:-translate-y-1 transition-all group"
+              style={{ border: "1.5px solid #C8E6C9", boxShadow: "0 2px 12px rgba(31,90,74,0.07)" }}
+            >
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4" style={{ backgroundColor: "#E8F5E9" }}>
+                <ClipboardList size={24} style={{ color: "#1F5A4A" }} />
+              </div>
+              <div className="w-6 h-0.5 rounded-full mb-3" style={{ backgroundColor: "#1F5A4A" }} />
+              <p className="font-display text-lg font-bold mb-2" style={{ color: "#1F5A4A" }}>Realizar monitoramento</p>
+              <p className="font-ui text-sm leading-relaxed" style={{ color: "#4A5568" }}>
+                Registrar inventários e testes de acurácia por estoque e setor de farmácia.
+              </p>
+            </button>
 
-          <button
-            onClick={() => onIrPara("painelMedicamentos")}
-            className="text-left border-2 border-[#1C1A17] bg-[#FAF7EF] p-6 hover:bg-[#1C1A17] hover:text-[#FAF7EF] transition-colors group"
-          >
-            <BarChart3 size={28} className="mb-4 text-[#8B7355]" />
-            <p className="font-display text-lg font-medium mb-2">Visualizar painel</p>
-            <p className="font-ui text-sm opacity-80 leading-relaxed">
-              Acompanhar a acurácia dos estoques e o histórico de inventários ao longo do tempo.
-            </p>
-          </button>
+            <button
+              onClick={() => onIrPara("painelMedicamentos")}
+              className="text-left bg-white rounded-2xl p-6 hover:shadow-xl hover:-translate-y-1 transition-all group"
+              style={{ border: "1.5px solid #BBDEFB", boxShadow: "0 2px 12px rgba(61,90,115,0.07)" }}
+            >
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4" style={{ backgroundColor: "#E3F2FD" }}>
+                <BarChart3 size={24} style={{ color: "#3D5A73" }} />
+              </div>
+              <div className="w-6 h-0.5 rounded-full mb-3" style={{ backgroundColor: "#3D5A73" }} />
+              <p className="font-display text-lg font-bold mb-2" style={{ color: "#3D5A73" }}>Visualizar painel</p>
+              <p className="font-ui text-sm leading-relaxed" style={{ color: "#4A5568" }}>
+                Acompanhar a acurácia dos estoques e o histórico de inventários ao longo do tempo.
+              </p>
+            </button>
+          </div>
         </div>
       </main>
     </div>
@@ -2366,7 +3135,7 @@ function TelaMonitoramentoMedicamentos({ onVoltar, estoques, setEstoques, histor
 
   if (!estoqueAtual) {
     return (
-      <div className="min-h-screen bg-[#EDE7D9] text-[#1C1A17]" style={{ fontFamily: "'Fraunces', Georgia, serif" }}>
+      <div className="min-h-screen bg-[#F4F7FA] text-[#1C1A17]" style={{ fontFamily: "'Fraunces', Georgia, serif" }}>
         <FontesGlobais />
         <BarraTopo titulo="Realizar monitoramento" onVoltar={onVoltar} produto="Medicamentos" />
 
@@ -2397,7 +3166,7 @@ function TelaMonitoramentoMedicamentos({ onVoltar, estoques, setEstoques, histor
               return (
                 <div
                   key={e.id}
-                  className="border-2 border-[#1C1A17] bg-[#FAF7EF] p-5 flex items-center justify-between gap-4 flex-wrap"
+                  className="bg-white border border-[#E2E8F0] rounded-xl p-5 flex items-center justify-between gap-4 flex-wrap"
                 >
                   <div className="min-w-[200px]">
                     <p className="font-ui text-base font-semibold">{e.nome}</p>
@@ -2432,7 +3201,7 @@ function TelaMonitoramentoMedicamentos({ onVoltar, estoques, setEstoques, histor
 
                     <button
                       onClick={() => setSetorEmEdicao(e)}
-                      className="p-2.5 border-2 border-[#1C1A17]/30 text-[#6B6357] hover:border-[#1C1A17] hover:text-[#1C1A17] transition-colors"
+                      className="p-2.5 border border-[#CBD5E1] text-[#6B6357] hover:border-[#1C1A17] hover:text-[#1C1A17] transition-colors"
                       aria-label={`Editar ${e.nome}`}
                       title="Editar setor"
                     >
@@ -2459,7 +3228,7 @@ function TelaMonitoramentoMedicamentos({ onVoltar, estoques, setEstoques, histor
 
   if (acaoAtiva === "inventario") {
     return (
-      <div className="min-h-screen bg-[#EDE7D9] text-[#1C1A17]" style={{ fontFamily: "'Fraunces', Georgia, serif" }}>
+      <div className="min-h-screen bg-[#F4F7FA] text-[#1C1A17]" style={{ fontFamily: "'Fraunces', Georgia, serif" }}>
         <FontesGlobais />
         <BarraTopo titulo="Realizar monitoramento" onVoltar={() => { setEstoqueId(null); setAcaoAtiva(null); }} produto="Medicamentos" />
         <main className="max-w-2xl mx-auto px-6 py-10">
@@ -2478,7 +3247,7 @@ function TelaMonitoramentoMedicamentos({ onVoltar, estoques, setEstoques, histor
 
   if (acaoAtiva === "acuracia") {
     return (
-      <div className="min-h-screen bg-[#EDE7D9] text-[#1C1A17]" style={{ fontFamily: "'Fraunces', Georgia, serif" }}>
+      <div className="min-h-screen bg-[#F4F7FA] text-[#1C1A17]" style={{ fontFamily: "'Fraunces', Georgia, serif" }}>
         <FontesGlobais />
         <BarraTopo titulo="Realizar monitoramento" onVoltar={() => { setEstoqueId(null); setAcaoAtiva(null); }} produto="Medicamentos" />
         <main className="max-w-2xl mx-auto px-6 py-10">
@@ -2486,7 +3255,7 @@ function TelaMonitoramentoMedicamentos({ onVoltar, estoques, setEstoques, histor
             <p className="font-mono-label text-[11px] uppercase tracking-wider text-[#6B6357]">{estoqueAtual.nome}</p>
             <h1 className="font-display text-xl font-medium mt-1">Teste de acurácia</h1>
           </div>
-          <FormularioAcuracia estoqueId={estoqueId} historico={historicoPorEstoque[estoqueId].acuracias} onRegistrar={registrarAcuracia} />
+          <FormularioAcuracia estoqueId={estoqueId} historico={historicoPorEstoque[estoqueId].acuracias} inventarios={historicoPorEstoque[estoqueId].inventarios} onRegistrar={registrarAcuracia} />
           <p className="font-mono-label text-[10px] text-[#6B6357] mt-8 text-center">
             Protótipo — dados não são salvos entre sessões.
           </p>
@@ -2524,7 +3293,7 @@ function ModalAdicionarSetor({ onFechar, onAdicionar }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: "rgba(31,27,22,0.85)" }} onClick={onFechar}>
       <div className="border-2 border-[#1C1A17] max-w-lg w-full max-h-[85vh] overflow-y-auto" style={{ backgroundColor: "#FAF7EF" }} onClick={(e) => e.stopPropagation()}>
-        <div className="border-b-2 border-[#1C1A17] px-6 py-4" style={{ backgroundColor: "#FAF7EF" }}>
+        <div className="border-b-2 border-[#E2E8F0] px-6 py-4" style={{ backgroundColor: "#FAF7EF" }}>
           <h3 className="font-ui font-semibold text-lg">Adicionar setores</h3>
           <p className="font-mono-label text-[11px] text-[#6B6357] mt-1">
             Cadastre quantos setores precisar de uma vez. Cada um fica disponível para inventário e teste de acurácia.
@@ -2533,7 +3302,7 @@ function ModalAdicionarSetor({ onFechar, onAdicionar }) {
 
         <div className="p-6 space-y-4" style={{ backgroundColor: "#FAF7EF" }}>
           {linhas.map((linha, idx) => (
-            <div key={idx} className="border-2 border-[#1C1A17]/20 bg-white p-3 space-y-2">
+            <div key={idx} className="border border-[#E2E8F0] rounded-lg bg-white p-3 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="font-mono-label text-[11px] text-[#6B6357]">Setor {idx + 1}</span>
                 {linhas.length > 1 && (
@@ -2549,7 +3318,7 @@ function ModalAdicionarSetor({ onFechar, onAdicionar }) {
                   value={linha.nome}
                   onChange={(e) => atualizarLinha(idx, "nome", e.target.value)}
                   placeholder="Ex.: Farmácia da UTI Pediátrica"
-                  className="w-full bg-[#FAF7EF] border-2 border-[#1C1A17]/30 py-2 px-3 font-ui text-sm placeholder:text-[#6B6357]/50 focus:outline-none focus:border-[#8B7355]"
+                  className="w-full bg-[#FAF7EF] border border-[#CBD5E1] py-2 px-3 font-ui text-sm placeholder:text-[#6B6357]/50 focus:outline-none focus:border-[#3D5A73]"
                 />
               </div>
               <div>
@@ -2559,7 +3328,7 @@ function ModalAdicionarSetor({ onFechar, onAdicionar }) {
                   value={linha.responsavel}
                   onChange={(e) => atualizarLinha(idx, "responsavel", e.target.value)}
                   placeholder="Ex.: Gerência de Farmácia"
-                  className="w-full bg-[#FAF7EF] border-2 border-[#1C1A17]/30 py-2 px-3 font-ui text-sm placeholder:text-[#6B6357]/50 focus:outline-none focus:border-[#8B7355]"
+                  className="w-full bg-[#FAF7EF] border border-[#CBD5E1] py-2 px-3 font-ui text-sm placeholder:text-[#6B6357]/50 focus:outline-none focus:border-[#3D5A73]"
                 />
               </div>
             </div>
@@ -2573,7 +3342,7 @@ function ModalAdicionarSetor({ onFechar, onAdicionar }) {
           </button>
         </div>
 
-        <div className="border-t-2 border-[#1C1A17] px-6 py-4 flex justify-end gap-3" style={{ backgroundColor: "#FAF7EF" }}>
+        <div className="border-t border-[#E2E8F0] px-6 py-4 flex justify-end gap-3" style={{ backgroundColor: "#FAF7EF" }}>
           <button
             onClick={onFechar}
             className="font-ui text-sm px-4 py-2 border-2 border-[#1C1A17] hover:bg-[#1C1A17] hover:text-[#FAF7EF] transition-colors"
@@ -2605,7 +3374,7 @@ function ModalEditarSetor({ setor, onFechar, onSalvar }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: "rgba(31,27,22,0.85)" }} onClick={onFechar}>
       <div className="border-2 border-[#1C1A17] max-w-md w-full" style={{ backgroundColor: "#FAF7EF" }} onClick={(e) => e.stopPropagation()}>
-        <div className="border-b-2 border-[#1C1A17] px-6 py-4" style={{ backgroundColor: "#FAF7EF" }}>
+        <div className="border-b-2 border-[#E2E8F0] px-6 py-4" style={{ backgroundColor: "#FAF7EF" }}>
           <h3 className="font-ui font-semibold text-lg">Editar setor</h3>
         </div>
 
@@ -2617,7 +3386,7 @@ function ModalEditarSetor({ setor, onFechar, onSalvar }) {
               value={nome}
               onChange={(e) => setNome(e.target.value)}
               autoFocus
-              className="w-full bg-white border-2 border-[#1C1A17]/30 py-2 px-3 font-ui text-sm focus:outline-none focus:border-[#8B7355]"
+              className="w-full bg-white border border-[#CBD5E1] py-2 px-3 font-ui text-sm focus:outline-none focus:border-[#3D5A73]"
             />
           </div>
           <div>
@@ -2626,12 +3395,12 @@ function ModalEditarSetor({ setor, onFechar, onSalvar }) {
               type="text"
               value={responsavel}
               onChange={(e) => setResponsavel(e.target.value)}
-              className="w-full bg-white border-2 border-[#1C1A17]/30 py-2 px-3 font-ui text-sm focus:outline-none focus:border-[#8B7355]"
+              className="w-full bg-white border border-[#CBD5E1] py-2 px-3 font-ui text-sm focus:outline-none focus:border-[#3D5A73]"
             />
           </div>
         </div>
 
-        <div className="border-t-2 border-[#1C1A17] px-6 py-4 flex justify-end gap-3" style={{ backgroundColor: "#FAF7EF" }}>
+        <div className="border-t border-[#E2E8F0] px-6 py-4 flex justify-end gap-3" style={{ backgroundColor: "#FAF7EF" }}>
           <button
             onClick={onFechar}
             className="font-ui text-sm px-4 py-2 border-2 border-[#1C1A17] hover:bg-[#1C1A17] hover:text-[#FAF7EF] transition-colors"
@@ -2681,8 +3450,8 @@ function FormularioInventario({ estoqueId, historico, onRegistrar }) {
   }
 
   return (
-    <section className="border-2 border-[#1C1A17] bg-[#FAF7EF] flex flex-col">
-      <div className="border-b-2 border-[#1C1A17] px-6 py-3 flex items-center gap-2">
+    <section className="bg-white border border-[#E2E8F0] rounded-xl flex flex-col">
+      <div className="border-b-2 border-[#E2E8F0] px-6 py-3 flex items-center gap-2">
         <ClipboardList size={16} />
         <h2 className="font-ui text-sm font-semibold uppercase tracking-wide">Inventário realizado</h2>
       </div>
@@ -2699,7 +3468,7 @@ function FormularioInventario({ estoqueId, historico, onRegistrar }) {
               type="date"
               value={data}
               onChange={(e) => setData(e.target.value)}
-              className="w-full bg-white border-2 border-[#1C1A17]/30 py-2 px-2 font-mono-label text-sm focus:outline-none focus:border-[#8B7355]"
+              className="w-full bg-white border border-[#CBD5E1] py-2 px-2 font-mono-label text-sm focus:outline-none focus:border-[#3D5A73]"
             />
           </div>
           <div>
@@ -2709,7 +3478,7 @@ function FormularioInventario({ estoqueId, historico, onRegistrar }) {
               value={responsavel}
               onChange={(e) => setResponsavel(e.target.value)}
               placeholder="Nome do responsável"
-              className="w-full bg-white border-2 border-[#1C1A17]/30 py-2 px-2 font-ui text-sm placeholder:text-[#6B6357]/50 focus:outline-none focus:border-[#8B7355]"
+              className="w-full bg-white border border-[#CBD5E1] py-2 px-2 font-ui text-sm placeholder:text-[#6B6357]/50 focus:outline-none focus:border-[#3D5A73]"
             />
           </div>
         </div>
@@ -2721,7 +3490,7 @@ function FormularioInventario({ estoqueId, historico, onRegistrar }) {
           {divergencias.length > 0 && (
             <div className="space-y-3 mb-2">
               {divergencias.map((d, idx) => (
-                <div key={idx} className="border-2 border-[#1C1A17]/20 bg-white p-3 space-y-2">
+                <div key={idx} className="border border-[#E2E8F0] rounded-lg bg-white p-3 space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="font-mono-label text-[11px] text-[#6B6357]">Divergência {idx + 1}</span>
                     <button
@@ -2739,7 +3508,7 @@ function FormularioInventario({ estoqueId, historico, onRegistrar }) {
                       onChange={(e) => atualizarDivergencia(idx, "identificada", e.target.value)}
                       placeholder="Ex.: sistema apontava 40 unidades, contagem física encontrou 36..."
                       rows={1}
-                      className="w-full bg-[#FAF7EF] border border-[#1C1A17]/20 p-2 font-ui text-sm placeholder:text-[#6B6357]/50 focus:outline-none focus:border-[#8B7355] resize-none"
+                      className="w-full bg-[#FAF7EF] border border-[#1C1A17]/20 p-2 font-ui text-sm placeholder:text-[#6B6357]/50 focus:outline-none focus:border-[#3D5A73] resize-none"
                     />
                   </div>
                   <div>
@@ -2749,7 +3518,7 @@ function FormularioInventario({ estoqueId, historico, onRegistrar }) {
                       onChange={(e) => atualizarDivergencia(idx, "corrigida", e.target.value)}
                       placeholder="Ex.: ajuste de saldo no sistema, lote com validade vencida descartado..."
                       rows={1}
-                      className="w-full bg-[#FAF7EF] border border-[#1C1A17]/20 p-2 font-ui text-sm placeholder:text-[#6B6357]/50 focus:outline-none focus:border-[#8B7355] resize-none"
+                      className="w-full bg-[#FAF7EF] border border-[#1C1A17]/20 p-2 font-ui text-sm placeholder:text-[#6B6357]/50 focus:outline-none focus:border-[#3D5A73] resize-none"
                     />
                   </div>
                 </div>
@@ -2781,14 +3550,14 @@ function FormularioInventario({ estoqueId, historico, onRegistrar }) {
         </div>
       </div>
 
-      <div className="border-t-2 border-[#1C1A17] p-4">
+      <div className="border-t border-[#E2E8F0] p-4">
         <p className="font-mono-label text-[11px] uppercase tracking-wider text-[#6B6357] mb-2">Histórico recente</p>
         {historico.length === 0 ? (
           <p className="font-ui text-xs text-[#6B6357]">Nenhum inventário registrado ainda.</p>
         ) : (
           <ul className="space-y-2 max-h-44 overflow-y-auto">
             {historico.map((h, i) => (
-              <li key={i} className="font-ui text-xs border-b border-[#1C1A17]/10 pb-2">
+              <li key={i} className="font-ui text-xs border-b border-[#E2E8F0] pb-2">
                 <span className="font-mono-label text-[#1C1A17] font-medium">{new Date(h.data).toLocaleDateString("pt-BR")}</span>
                 {" — "}{h.responsavel}
                 {h.divergencias && h.divergencias.length > 0 && (
@@ -2810,7 +3579,7 @@ function FormularioInventario({ estoqueId, historico, onRegistrar }) {
   );
 }
 
-function FormularioAcuracia({ estoqueId, historico, onRegistrar }) {
+function FormularioAcuracia({ estoqueId, historico, inventarios, onRegistrar }) {
   const hoje = new Date().toISOString().slice(0, 10);
   const [data, setData] = useState(hoje);
   const [percentual, setPercentual] = useState("");
@@ -2821,6 +3590,20 @@ function FormularioAcuracia({ estoqueId, historico, onRegistrar }) {
   const abaixoMeta = percentualNum !== null && !Number.isNaN(percentualNum) && percentualNum < META_ACURACIA;
   const critico = percentualNum !== null && !Number.isNaN(percentualNum) && percentualNum < LIMITE_CRITICO_ACURACIA;
 
+  // Calcula quantos dias corridos se passaram entre a data do teste de acurácia
+  // e o último inventário registrado ANTES dessa data neste mesmo setor.
+  function diasDesdeUltimoInventario(dataAcuracia) {
+    if (!inventarios || inventarios.length === 0) return null;
+    const tsAcuracia = new Date(dataAcuracia).getTime();
+    // inventarios armazenados com o mais recente primeiro — filtra só os anteriores ao teste
+    const anteriores = inventarios.filter((inv) => new Date(inv.data).getTime() <= tsAcuracia);
+    if (anteriores.length === 0) return null;
+    // o mais recente dentre os anteriores (primeiro da lista, já que está em ordem decrescente)
+    const ultimoInv = anteriores[0];
+    const diffMs = tsAcuracia - new Date(ultimoInv.data).getTime();
+    return Math.round(diffMs / (1000 * 60 * 60 * 24));
+  }
+
   function handleRegistrar() {
     if (!aplicadoPor.trim() || percentualNum === null || Number.isNaN(percentualNum)) return;
     onRegistrar(estoqueId, { data, percentual: percentualNum, aplicadoPor });
@@ -2830,8 +3613,8 @@ function FormularioAcuracia({ estoqueId, historico, onRegistrar }) {
   }
 
   return (
-    <section className="border-2 border-[#1C1A17] bg-[#FAF7EF] flex flex-col">
-      <div className="border-b-2 border-[#1C1A17] px-6 py-3 flex items-center gap-2">
+    <section className="bg-white border border-[#E2E8F0] rounded-xl flex flex-col">
+      <div className="border-b-2 border-[#E2E8F0] px-6 py-3 flex items-center gap-2">
         <BarChart3 size={16} />
         <h2 className="font-ui text-sm font-semibold uppercase tracking-wide">Teste de acurácia (UCI)</h2>
       </div>
@@ -2848,7 +3631,7 @@ function FormularioAcuracia({ estoqueId, historico, onRegistrar }) {
               type="date"
               value={data}
               onChange={(e) => setData(e.target.value)}
-              className="w-full bg-white border-2 border-[#1C1A17]/30 py-2 px-2 font-mono-label text-sm focus:outline-none focus:border-[#8B7355]"
+              className="w-full bg-white border border-[#CBD5E1] py-2 px-2 font-mono-label text-sm focus:outline-none focus:border-[#3D5A73]"
             />
           </div>
           <div>
@@ -2858,7 +3641,7 @@ function FormularioAcuracia({ estoqueId, historico, onRegistrar }) {
               value={aplicadoPor}
               onChange={(e) => setAplicadoPor(e.target.value)}
               placeholder="Servidor da UCI"
-              className="w-full bg-white border-2 border-[#1C1A17]/30 py-2 px-2 font-ui text-sm placeholder:text-[#6B6357]/50 focus:outline-none focus:border-[#8B7355]"
+              className="w-full bg-white border border-[#CBD5E1] py-2 px-2 font-ui text-sm placeholder:text-[#6B6357]/50 focus:outline-none focus:border-[#3D5A73]"
             />
           </div>
         </div>
@@ -2875,7 +3658,7 @@ function FormularioAcuracia({ estoqueId, historico, onRegistrar }) {
               onChange={(e) => setPercentual(e.target.value)}
               placeholder="0,0"
               className={`w-28 border-2 py-2 px-3 font-ui text-lg font-semibold focus:outline-none bg-white
-                ${critico ? "border-[#A13D2B] text-[#A13D2B] ring-2 ring-[#A13D2B]/30" : abaixoMeta ? "border-[#A13D2B] text-[#A13D2B]" : "border-[#1C1A17]/30 text-[#1C1A17] focus:border-[#8B7355]"}`}
+                ${critico ? "border-[#A13D2B] text-[#A13D2B] ring-2 ring-[#A13D2B]/30" : abaixoMeta ? "border-[#A13D2B] text-[#A13D2B]" : "border-[#1C1A17]/30 text-[#1C1A17] focus:border-[#3D5A73]"}`}
             />
             <span className="font-ui text-lg text-[#6B6357]">%</span>
             {abaixoMeta && !critico && (
@@ -2913,23 +3696,37 @@ function FormularioAcuracia({ estoqueId, historico, onRegistrar }) {
         </div>
       </div>
 
-      <div className="border-t-2 border-[#1C1A17] p-4">
+      <div className="border-t border-[#E2E8F0] p-4">
         <p className="font-mono-label text-[11px] uppercase tracking-wider text-[#6B6357] mb-2">Histórico recente</p>
         {historico.length === 0 ? (
           <p className="font-ui text-xs text-[#6B6357]">Nenhum teste de acurácia registrado ainda.</p>
         ) : (
-          <ul className="space-y-2 max-h-44 overflow-y-auto">
+          <ul className="space-y-2 max-h-52 overflow-y-auto">
             {historico.map((h, i) => {
               const ruim = h.percentual < META_ACURACIA;
+              const dias = diasDesdeUltimoInventario(h.data);
               return (
-                <li key={i} className="font-ui text-xs border-b border-[#1C1A17]/10 pb-2 flex items-center justify-between gap-2">
-                  <span>
-                    <span className="font-mono-label text-[#1C1A17] font-medium">{new Date(h.data).toLocaleDateString("pt-BR")}</span>
-                    {" — "}{h.aplicadoPor}
-                  </span>
-                  <span className="font-mono-label font-semibold" style={{ color: ruim ? "#A13D2B" : "#1F5A4A" }}>
-                    {h.percentual}%
-                  </span>
+                <li key={i} className="font-ui text-xs border-b border-[#E2E8F0] pb-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <span>
+                      <span className="font-mono-label text-[#1C1A17] font-medium">{new Date(h.data).toLocaleDateString("pt-BR")}</span>
+                      {" — "}{h.aplicadoPor}
+                    </span>
+                    <span className="font-mono-label font-semibold" style={{ color: ruim ? "#A13D2B" : "#1F5A4A" }}>
+                      {h.percentual}%
+                    </span>
+                  </div>
+                  {dias !== null ? (
+                    <p className="font-mono-label text-[10px] text-[#6B6357] mt-0.5">
+                      {dias === 0
+                        ? "Inventário realizado no mesmo dia"
+                        : `${dias} dia${dias > 1 ? "s" : ""} desde o último inventário deste setor`}
+                    </p>
+                  ) : (
+                    <p className="font-mono-label text-[10px] text-[#6B6357]/60 mt-0.5">
+                      Nenhum inventário anterior encontrado neste setor
+                    </p>
+                  )}
                 </li>
               );
             })}
@@ -2957,13 +3754,13 @@ function TelaPainelMedicamentos({ onVoltar, estoques, historicoPorEstoque }) {
   }
 
   return (
-    <div className="min-h-screen bg-[#EDE7D9] text-[#1C1A17]" style={{ fontFamily: "'Fraunces', Georgia, serif" }}>
+    <div className="min-h-screen bg-[#F4F7FA] text-[#1C1A17]" style={{ fontFamily: "'Fraunces', Georgia, serif" }}>
       <FontesGlobais />
       <BarraTopo titulo="Painel de acompanhamento" onVoltar={onVoltar} produto="Medicamentos" />
 
       <main className="max-w-5xl mx-auto px-6 py-10">
-        <section className="border-2 border-[#1C1A17] bg-[#FAF7EF]">
-          <div className="border-b-2 border-[#1C1A17] px-6 py-3 flex items-center justify-between flex-wrap gap-3">
+        <section className="bg-white border border-[#E2E8F0] rounded-xl">
+          <div className="border-b-2 border-[#E2E8F0] px-6 py-3 flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-2">
               <BarChart3 size={16} />
               <h2 className="font-ui text-sm font-semibold uppercase tracking-wide">Acurácia por setor — ordem dos testes</h2>
@@ -2981,7 +3778,7 @@ function TelaPainelMedicamentos({ onVoltar, estoques, historicoPorEstoque }) {
             <div className="overflow-x-auto p-6">
               <table className="w-full text-sm font-ui min-w-[640px]">
                 <thead>
-                  <tr className="border-b-2 border-[#1C1A17] bg-[#1C1A17] text-[#EDE7D9]">
+                  <tr className="border-b border-[#1C3A5A]/20 bg-[#1C3A5A] text-white">
                     <th className="text-left font-mono-label text-[11px] uppercase tracking-wide px-4 py-3 sticky left-0 bg-[#1C1A17]">Setor</th>
                     {colunas.map((i) => (
                       <th key={i} className="text-center font-mono-label text-[11px] uppercase tracking-wide px-3 py-3 whitespace-nowrap">
@@ -2992,7 +3789,7 @@ function TelaPainelMedicamentos({ onVoltar, estoques, historicoPorEstoque }) {
                 </thead>
                 <tbody>
                   {acuraciasOrdenadas.map(({ estoque, testes }) => (
-                    <tr key={estoque.id} className="border-b border-[#1C1A17]/15">
+                    <tr key={estoque.id} className="border-b border-[#E2E8F0]">
                       <td className="px-4 py-2.5 sticky left-0 bg-[#FAF7EF]">
                         <span className="text-xs font-medium">{estoque.nome}</span>
                       </td>
@@ -3021,8 +3818,8 @@ function TelaPainelMedicamentos({ onVoltar, estoques, historicoPorEstoque }) {
         </section>
 
         {/* Inventários realizados: 1 quadradinho por inventário registrado, por setor */}
-        <section className="border-2 border-[#1C1A17] bg-[#FAF7EF] mt-8">
-          <div className="border-b-2 border-[#1C1A17] px-6 py-3 flex items-center gap-2">
+        <section className="bg-white border border-[#E2E8F0] rounded-xl mt-8">
+          <div className="border-b-2 border-[#E2E8F0] px-6 py-3 flex items-center gap-2">
             <ClipboardList size={16} />
             <h2 className="font-ui text-sm font-semibold uppercase tracking-wide">Inventários realizados por setor</h2>
           </div>
