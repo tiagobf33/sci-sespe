@@ -10,13 +10,17 @@ const LOGO_PE_BASE64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAcUAAADICA
 const LOGO_SCI_BASE64 = "data:image/png;base64,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";
 
 const HOSPITAIS = [
-  { sigla: "HR", nome: "Hospital HR", cor: "#0068FF" },
-  { sigla: "HRA", nome: "Hospital HRA", cor: "#FF6700" },
-  { sigla: "HGV", nome: "Hospital HGV", cor: "#4400FF" },
-  { sigla: "HBL", nome: "Hospital HBL", cor: "#3AE8C6" },
-  { sigla: "HAM", nome: "Hospital HAM", cor: "#4AE23D" },
-  { sigla: "HOF", nome: "Hospital HOF", cor: "#FFCE00" },
+  { sigla: "HR",  nome: "Hospital da Restauração",         cor: "#0068FF", responsavel: "José Henrique" },
+  { sigla: "HRA", nome: "Hospital Regional do Agreste",    cor: "#FF6700", responsavel: "Johnson Rodrigues" },
+  { sigla: "HGV", nome: "Hospital Getúlio Vargas",         cor: "#4400FF", responsavel: "Bruno Batista" },
+  { sigla: "HBL", nome: "Hospital Barão de Lucena",        cor: "#3AE8C6", responsavel: "Vera Lúcia" },
+  { sigla: "HAM", nome: "Hospital Agamenon Magalhães",     cor: "#4AE23D", responsavel: "Sandro Mendonça" },
+  { sigla: "HOF", nome: "Hospital Otávio de Freitas",      cor: "#FFCE00", responsavel: "Silvana Melo" },
 ];
+
+// Mapa rápido: sigla → responsável e responsável → sigla
+const RESPONSAVEL_POR_HOSPITAL = Object.fromEntries(HOSPITAIS.map(h => [h.sigla, h.responsavel]));
+const HOSPITAL_POR_RESPONSAVEL = Object.fromEntries(HOSPITAIS.map(h => [h.responsavel, h.sigla]));
 
 const ARTIGOS = [
   {
@@ -522,12 +526,14 @@ function GraficoSerieHistorica({
   zonaIntermediaria,
   zonaAlerta,
   apenasPonotos = false,
+  renderTooltip,
 }) {
   const largura = 760;
   const altura = 420;
   const margem = { top: 24, right: 24, bottom: 40, left: 52 };
   const innerW = largura - margem.left - margem.right;
   const innerH = altura - margem.top - margem.bottom;
+  const [tooltipPos, setTooltipPos] = React.useState(null); // { x, y } em % do container
 
   const hospitaisExibidos = hospitaisFiltrados || HOSPITAIS;
   const meses = historico[HOSPITAIS[0].sigla];
@@ -537,9 +543,7 @@ function GraficoSerieHistorica({
   const y = (v) => margem.top + innerH - ((v - yMin) / (yMax - yMin)) * innerH;
   const yRef = linhaReferencia !== undefined ? y(linhaReferencia) : null;
 
-  function corDoPonto(h) {
-    return h.cor; // sempre a cor do hospital, independente do valor
-  }
+  function corDoPonto(h) { return h.cor; }
 
   const jitterMap = {};
   hospitaisExibidos.forEach((h) => {
@@ -557,61 +561,98 @@ function GraficoSerieHistorica({
     const group = jitterMap[key] || [];
     if (group.length <= 1) return 0;
     const pos = group.indexOf(sigla);
-    const spread = (group.length - 1) * 8;
-    return -spread / 2 + pos * 8;
+    return -((group.length - 1) * 8) / 2 + pos * 8;
+  }
+
+  function handleDotClick(e, sigla, idx) {
+    const svg = e.currentTarget.closest('svg');
+    const rect = svg.getBoundingClientRect();
+    const cx = e.currentTarget.querySelector('circle').cx.baseVal.value;
+    const cy = e.currentTarget.querySelector('circle').cy.baseVal.value;
+    const vb = largura;
+    const vbH = altura;
+    const pctX = (cx / vb) * 100;
+    const pctY = (cy / vbH) * 100;
+    setTooltipPos({ pctX, pctY });
+    onSelecionarPonto({ sigla, idx });
   }
 
   return (
-    <div className="overflow-x-auto">
-      <svg viewBox={`0 0 ${largura} ${altura}`} className="w-full min-w-[600px]" role="img" aria-label={ariaLabel}>
-        {zonaOtima && <rect x={margem.left} y={y(Math.min(zonaOtima.max, yMax))} width={innerW} height={y(Math.max(zonaOtima.min, yMin)) - y(Math.min(zonaOtima.max, yMax))} fill="#4AE23D" fillOpacity="0.13"/>}
-        {zonaOtima && <text x={margem.left + 6} y={y(Math.min(zonaOtima.max, yMax)) + 14} fontSize="9" fill="#00952A" fontFamily="monospace" fontWeight="700">▲ {zonaOtima.label}</text>}
-        {zonaIntermediaria && <rect x={margem.left} y={y(Math.min(zonaIntermediaria.max, yMax))} width={innerW} height={y(Math.max(zonaIntermediaria.min, yMin)) - y(Math.min(zonaIntermediaria.max, yMax))} fill="#FFCE00" fillOpacity="0.18"/>}
-        {zonaIntermediaria && <text x={margem.left + 6} y={y(Math.min(zonaIntermediaria.max, yMax)) + 14} fontSize="9" fill="#FF6700" fontFamily="monospace" fontWeight="700">⚠ {zonaIntermediaria.label}</text>}
-        {zonaAlerta && <rect x={margem.left} y={y(Math.min(zonaAlerta.max, yMax))} width={innerW} height={y(Math.max(zonaAlerta.min, yMin)) - y(Math.min(zonaAlerta.max, yMax))} fill="#ED282C" fillOpacity="0.10"/>}
-        {zonaAlerta && <text x={margem.left + 6} y={y(Math.min(zonaAlerta.max, yMax)) + 14} fontSize="9" fill="#ED282C" fontFamily="monospace" fontWeight="700">▼ {zonaAlerta.label}</text>}
+    <div className="overflow-x-auto relative" onClick={(e) => { if (e.target === e.currentTarget) { setTooltipPos(null); onSelecionarPonto(null); } }}>
+      <div className="relative min-w-[600px]">
+        <svg viewBox={`0 0 ${largura} ${altura}`} className="w-full" role="img" aria-label={ariaLabel}>
+          {zonaOtima && <rect x={margem.left} y={y(Math.min(zonaOtima.max, yMax))} width={innerW} height={y(Math.max(zonaOtima.min, yMin)) - y(Math.min(zonaOtima.max, yMax))} fill="#4AE23D" fillOpacity="0.13"/>}
+          {zonaOtima && <text x={margem.left + 6} y={y(Math.min(zonaOtima.max, yMax)) + 14} fontSize="9" fill="#00952A" fontFamily="monospace" fontWeight="700">▲ {zonaOtima.label}</text>}
+          {zonaIntermediaria && <rect x={margem.left} y={y(Math.min(zonaIntermediaria.max, yMax))} width={innerW} height={y(Math.max(zonaIntermediaria.min, yMin)) - y(Math.min(zonaIntermediaria.max, yMax))} fill="#FFCE00" fillOpacity="0.18"/>}
+          {zonaIntermediaria && <text x={margem.left + 6} y={y(Math.min(zonaIntermediaria.max, yMax)) + 14} fontSize="9" fill="#FF6700" fontFamily="monospace" fontWeight="700">⚠ {zonaIntermediaria.label}</text>}
+          {zonaAlerta && <rect x={margem.left} y={y(Math.min(zonaAlerta.max, yMax))} width={innerW} height={y(Math.max(zonaAlerta.min, yMin)) - y(Math.min(zonaAlerta.max, yMax))} fill="#ED282C" fillOpacity="0.10"/>}
+          {zonaAlerta && <text x={margem.left + 6} y={y(Math.min(zonaAlerta.max, yMax)) + 14} fontSize="9" fill="#ED282C" fontFamily="monospace" fontWeight="700">▼ {zonaAlerta.label}</text>}
 
-        {gridValues.map((v) => (
-          <g key={v}>
-            <line x1={margem.left} x2={largura - margem.right} y1={y(v)} y2={y(v)} stroke="#0C2856" strokeOpacity="0.07"/>
-            <text x={margem.left - 8} y={y(v)} textAnchor="end" dominantBaseline="middle" fontSize="11" fill="#6B7A8D" fontFamily="monospace">{formatarTick(v)}</text>
-          </g>
-        ))}
+          {gridValues.map((v) => (
+            <g key={v}>
+              <line x1={margem.left} x2={largura - margem.right} y1={y(v)} y2={y(v)} stroke="#0C2856" strokeOpacity="0.07"/>
+              <text x={margem.left - 8} y={y(v)} textAnchor="end" dominantBaseline="middle" fontSize="11" fill="#6B7A8D" fontFamily="monospace">{formatarTick(v)}</text>
+            </g>
+          ))}
 
-        {yRef !== null && <>
-          <line x1={margem.left} x2={largura - margem.right} y1={yRef} y2={yRef} stroke={corAbaixoReferencia || "#ED282C"} strokeWidth="1.5" strokeDasharray="5 4"/>
-          <text x={largura - margem.right} y={yRef - 6} textAnchor="end" fontSize="10" fill={corAbaixoReferencia || "#ED282C"} fontFamily="monospace">{labelReferencia}</text>
-        </>}
+          {yRef !== null && <>
+            <line x1={margem.left} x2={largura - margem.right} y1={yRef} y2={yRef} stroke={corAbaixoReferencia || "#ED282C"} strokeWidth="1.5" strokeDasharray="5 4"/>
+            <text x={largura - margem.right} y={yRef - 6} textAnchor="end" fontSize="10" fill={corAbaixoReferencia || "#ED282C"} fontFamily="monospace">{labelReferencia}</text>
+          </>}
 
-        {meses.map((m, i) => (
-          <text key={i} x={x(i)} y={altura - 8} textAnchor="middle" fontSize="11" fill="#6B7A8D" fontFamily="monospace">{m.label}</text>
-        ))}
+          {meses.map((m, i) => (
+            <text key={i} x={x(i)} y={altura - 8} textAnchor="middle" fontSize="11" fill="#6B7A8D" fontFamily="monospace">{m.label}</text>
+          ))}
 
-        {!apenasPonotos && hospitaisExibidos.map((h) => {
-          const dados = historico[h.sigla];
-          const pts = dados.map((d, i) => { const v = campoValor(d); return v !== null ? `${x(i) + jitterX(h.sigla, i, v)},${y(v)}` : null; }).filter(Boolean);
-          if (pts.length < 2) return null;
-          return <polyline key={h.sigla} points={pts.join(" ")} fill="none" stroke={h.cor} strokeWidth="1.8" strokeOpacity="0.6"/>;
-        })}
+          {!apenasPonotos && hospitaisExibidos.map((h) => {
+            const dados = historico[h.sigla];
+            const pts = dados.map((d, i) => { const v = campoValor(d); return v !== null ? `${x(i) + jitterX(h.sigla, i, v)},${y(v)}` : null; }).filter(Boolean);
+            if (pts.length < 2) return null;
+            return <polyline key={h.sigla} points={pts.join(" ")} fill="none" stroke={h.cor} strokeWidth="1.8" strokeOpacity="0.6"/>;
+          })}
 
-        {hospitaisExibidos.map((h) =>
-          historico[h.sigla].map((d, i) => {
-            const valor = campoValor(d);
-            if (valor === null) return null;
-            const isSelected = pontoSelecionado && pontoSelecionado.sigla === h.sigla && pontoSelecionado.idx === i;
-            const cor = corDoPonto(h);
-            const jx = jitterX(h.sigla, i, valor);
-            const cx = x(i) + jx;
-            const cy = y(valor);
-            return (
-              <g key={`${h.sigla}-${i}`} style={{ cursor: "pointer" }} onClick={() => onSelecionarPonto({ sigla: h.sigla, idx: i })}>
-                <circle cx={cx} cy={cy} r={isSelected ? 15 : 12} fill={cor} fillOpacity={isSelected ? 1 : 0.9} stroke="white" strokeWidth="2"/>
-                <text x={cx} y={cy} textAnchor="middle" dominantBaseline="middle" fontSize="8" fill="white" fontFamily="monospace" fontWeight="700" style={{ pointerEvents: "none" }}>{h.sigla}</text>
-              </g>
-            );
-          })
+          {hospitaisExibidos.map((h) =>
+            historico[h.sigla].map((d, i) => {
+              const valor = campoValor(d);
+              if (valor === null) return null;
+              const isSelected = pontoSelecionado && pontoSelecionado.sigla === h.sigla && pontoSelecionado.idx === i;
+              const cor = corDoPonto(h);
+              const jx = jitterX(h.sigla, i, valor);
+              const cx = x(i) + jx;
+              const cy = y(valor);
+              return (
+                <g key={`${h.sigla}-${i}`} style={{ cursor: "pointer" }}
+                  onClick={(e) => handleDotClick(e, h.sigla, i)}>
+                  <circle cx={cx} cy={cy} r={isSelected ? 15 : 12} fill={cor} fillOpacity={isSelected ? 1 : 0.9} stroke="white" strokeWidth={isSelected ? 3 : 2}/>
+                  <text x={cx} y={cy} textAnchor="middle" dominantBaseline="middle" fontSize="8" fill="white" fontFamily="monospace" fontWeight="700" style={{ pointerEvents: "none" }}>{h.sigla}</text>
+                </g>
+              );
+            })
+          )}
+        </svg>
+
+        {/* Tooltip flutuante próximo à bolinha clicada */}
+        {pontoSelecionado && tooltipPos && renderTooltip && (
+          <div
+            className="absolute z-50 pointer-events-none"
+            style={{
+              left: `${Math.min(tooltipPos.pctX, 70)}%`,
+              top: `${Math.max(tooltipPos.pctY - 5, 2)}%`,
+              transform: tooltipPos.pctX > 70 ? "translateX(-100%)" : "translateX(8px)",
+            }}
+          >
+            <div className="bg-white rounded-xl shadow-xl border border-[#E2E8F0] p-4 min-w-[200px] max-w-[280px]"
+              style={{ boxShadow: "0 8px 32px rgba(12,40,86,0.18)" }}>
+              {/* Seta indicadora */}
+              <div className="absolute w-2 h-2 bg-white border-l border-t border-[#E2E8F0] rotate-45"
+                style={{ left: tooltipPos.pctX > 70 ? "auto" : -5, right: tooltipPos.pctX > 70 ? -5 : "auto", top: 16,
+                  transform: tooltipPos.pctX > 70 ? "rotate(135deg)" : "rotate(-45deg)" }}
+              />
+              {renderTooltip(pontoSelecionado)}
+            </div>
+          </div>
         )}
-      </svg>
+      </div>
     </div>
   );
 }
@@ -1025,7 +1066,7 @@ function FontesGlobais() {
   );
 }
 
-function BarraTopo({ titulo, onVoltar, produto = "Alimentação Hospitalar" }) {
+function BarraTopo({ titulo, onVoltar, produto = "Alimentação Hospitalar", onIrParaInicio }) {
   return (
     <>
       <header style={{ backgroundColor: "#0C2856" }}>
@@ -1041,7 +1082,23 @@ function BarraTopo({ titulo, onVoltar, produto = "Alimentação Hospitalar" }) {
               <p className="font-mono-label text-[10px] uppercase tracking-wide truncate" style={{ color: "rgba(255,255,255,0.55)" }}>{produto} · UCI-SES-PE</p>
             </div>
           </div>
-          <img src={LOGO_SCI_BASE64} alt="SCI — Sistema de Controle Interno" style={{ height: 32 }} className="flex-shrink-0" />
+          <div className="flex items-center gap-3">
+            {onIrParaInicio && (
+              <button
+                onClick={onIrParaInicio}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all hover:opacity-90"
+                style={{ backgroundColor: "rgba(255,255,255,0.12)", color: "white", border: "1px solid rgba(255,255,255,0.2)" }}
+                aria-label="Tela inicial"
+              >
+                <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                  <path d="M2 6.5L8 2l6 4.5V14a1 1 0 01-1 1H3a1 1 0 01-1-1V6.5z" stroke="white" strokeWidth="1.5" strokeLinejoin="round"/>
+                  <path d="M6 15V9h4v6" stroke="white" strokeWidth="1.5" strokeLinejoin="round"/>
+                </svg>
+                <span className="font-mono-label text-[10px] uppercase tracking-wide">Tela inicial</span>
+              </button>
+            )}
+            <img src={LOGO_SCI_BASE64} alt="SCI — Sistema de Controle Interno" style={{ height: 32 }} className="flex-shrink-0" />
+          </div>
         </div>
         {/* Barra colorida Gov-PE */}
         <div className="flex h-1">
@@ -1099,13 +1156,13 @@ function TelaLayout({ children }) {
 
 
 // ---------- Tela: Monitoramento (formulário) ----------
-function TelaMonitoramento({ onVoltar }) {
+function TelaMonitoramento({ onVoltar, onIrParaInicio }) {
   const [aba, setAba] = useState(null); // null | "checklist" | "consumo"
 
   if (aba === null) {
     return (
       <TelaLayout>
-      <BarraTopo titulo="Realizar monitoramento" onVoltar={onVoltar} />
+      <BarraTopo titulo="Realizar monitoramento" onVoltar={onVoltar} onIrParaInicio={onIrParaInicio} />
 
         <main className="max-w-3xl mx-auto px-6 py-10">
           <p className="font-mono-label text-[11px] uppercase tracking-[0.18em] text-[#6B7A8D] mb-2">O que você deseja fazer?</p>
@@ -1149,7 +1206,7 @@ function TelaMonitoramento({ onVoltar }) {
 
   return (
     <TelaLayout>
-      <BarraTopo titulo="Realizar monitoramento" onVoltar={() => setAba(null)} />
+      <BarraTopo titulo="Realizar monitoramento" onVoltar={() => setAba(null)} onIrParaInicio={onIrParaInicio} />
 
       <div className="max-w-6xl mx-auto px-6 pt-6">
         <p className="font-mono-label text-[11px] uppercase tracking-wider text-[#6B6357]">
@@ -1167,7 +1224,17 @@ function AbaChecklist() {
   const [hospital, setHospital] = useState(HOSPITAIS[0].sigla);
   const [mesRef, setMesRef] = useState(now.getMonth());
   const [anoRef, setAnoRef] = useState(now.getFullYear());
-  const [responsavel, setResponsavel] = useState("");
+  const [responsavel, setResponsavel] = useState(RESPONSAVEL_POR_HOSPITAL[HOSPITAIS[0].sigla] || "");
+
+  // Sincronização automática hospital ↔ responsável
+  function handleHospitalChange(sigla) {
+    setHospital(sigla);
+    if (RESPONSAVEL_POR_HOSPITAL[sigla]) setResponsavel(RESPONSAVEL_POR_HOSPITAL[sigla]);
+  }
+  function handleResponsavelChange(nome) {
+    setResponsavel(nome);
+    if (HOSPITAL_POR_RESPONSAVEL[nome]) setHospital(HOSPITAL_POR_RESPONSAVEL[nome]);
+  }
   const [respostas, setRespostas] = useState({});
   const [observacoes, setObservacoes] = useState({});
   const [showSummary, setShowSummary] = useState(false);
@@ -1314,7 +1381,7 @@ function AbaChecklist() {
               <div className="relative">
                 <select
                   value={hospital}
-                  onChange={(e) => setHospital(e.target.value)}
+                  onChange={(e) => handleHospitalChange(e.target.value)}
                   className="w-full appearance-none bg-transparent border-b-2 border-[#E2E8F0] py-2 pr-8 font-ui text-base focus:outline-none focus:border-[#3D5A73]"
                 >
                   {HOSPITAIS.map((h) => (
@@ -1357,7 +1424,7 @@ function AbaChecklist() {
               </label>
               <select
                 value={responsavel}
-                onChange={(e) => setResponsavel(e.target.value)}
+                onChange={(e) => handleResponsavelChange(e.target.value)}
                 className="w-full bg-transparent border-b-2 border-[#E2E8F0] py-2 font-ui text-base focus:outline-none focus:border-[#3D5A73]"
               >
                 <option value="">— Selecione o servidor —</option>
@@ -2074,7 +2141,7 @@ function TabelaProporcoesHospitais() {
   );
 }
 
-function TelaPainel({ onVoltar }) {
+function TelaPainel({ onVoltar, onIrParaInicio }) {
   const [hospital, setHospital] = useState(HOSPITAIS[0].sigla);
 
   // Quais hospitais aparecem nos gráficos de comparação. O hospital selecionado
@@ -2107,11 +2174,121 @@ function TelaPainel({ onVoltar }) {
 
   const hospitaisParaGraficos = HOSPITAIS.filter((h) => hospitaisVisiveis.has(h.sigla) || h.sigla === hospital);
 
+  const [gerando, setGerando] = React.useState(false);
+
+  function gerarPDFAlimentacao() {
+    setGerando(true);
+    const agora = new Date().toLocaleString("pt-BR");
+    const ultimoIdx = Math.max(...HOSPITAIS.map((h) => HISTORICO_MOCK[h.sigla].length - 1));
+    const labelMes = HISTORICO_MOCK[HOSPITAIS[0].sigla][ultimoIdx]?.label || "";
+
+    const estilo = document.createElement("style");
+    estilo.id = "sci-pdf-style";
+    estilo.textContent = `@media print {
+      body > *:not(#sci-pdf-root){display:none!important}
+      #sci-pdf-root{display:block!important}
+      @page{margin:18mm 14mm;size:A4}
+    }
+    #sci-pdf-root{display:none;font-family:Arial,sans-serif;color:#0C2856;font-size:11pt;line-height:1.4}
+    #sci-pdf-root h1{font-size:17pt;font-weight:700;margin:0 0 3px}
+    #sci-pdf-root h2{font-size:11pt;font-weight:700;margin:14px 0 6px;color:#0C2856;border-bottom:2px solid #0068FF;padding-bottom:3px}
+    #sci-pdf-root table{width:100%;border-collapse:collapse;font-size:8.5pt;margin-bottom:12px}
+    #sci-pdf-root th{background:#0C2856;color:white;padding:4px 7px;text-align:left;font-size:7.5pt}
+    #sci-pdf-root td{padding:3px 7px;border-bottom:1px solid #E2E8F0}
+    #sci-pdf-root tr:nth-child(even) td{background:#F4F7FA}
+    #sci-pdf-root .pill{display:inline-block;padding:1px 5px;border-radius:3px;font-size:7.5pt;font-weight:700}
+    #sci-pdf-root .pb{page-break-before:always}
+    #sci-pdf-root .footer{position:fixed;bottom:8mm;left:14mm;right:14mm;font-size:7.5pt;color:#6B7A8D;display:flex;justify-content:space-between;border-top:1px solid #E2E8F0;padding-top:3px}
+    #sci-pdf-root .bar{height:3px;display:flex;margin-bottom:12px}
+    #sci-pdf-root .bar span{flex:1}`;
+    const div = document.createElement("div");
+    div.id = "sci-pdf-root";
+    const cores = ["#0068FF","#3AE8C6","#4AE23D","#FFCE00","#FF6700","#ED282C"];
+
+    div.innerHTML = `
+      <div class="bar">${cores.map(c=>`<span style="background:${c}"></span>`).join("")}</div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;padding-bottom:10px;border-bottom:3px solid #0068FF">
+        <div>
+          <h1>Painel de Alimentação Hospitalar</h1>
+          <p style="margin:2px 0;color:#0068FF;font-size:10pt;font-weight:600">Controladoria-Geral do Estado de Pernambuco</p>
+          <p style="margin:0;color:#6B7A8D;font-size:8.5pt">Unidades de Controle Interno — SES-PE</p>
+        </div>
+        <div style="text-align:right;font-size:8pt;color:#6B7A8D">
+          <div>Gerado em: <strong>${agora}</strong></div>
+          <div>Referência: <strong>${labelMes}</strong></div>
+        </div>
+      </div>
+
+      <h2>1. ICA — Índice de Controle de Alimentação</h2>
+      <table><thead><tr><th>Hospital</th><th>ICA</th><th>Status</th><th>Conforme</th><th>Não conforme</th></tr></thead><tbody>
+        ${HOSPITAIS.map(h=>{const d=HISTORICO_ICA_MOCK[h.sigla][ultimoIdx];const cor=d.ica>=80?"#00952A":d.ica>=60?"#FF6700":"#ED282C";const sit=d.ica>=80?"Conforme":d.ica>=60?"Atenção":"Crítico";return`<tr><td>${h.nome}</td><td style="font-weight:700;color:${cor}">${d.ica}%</td><td><span class="pill" style="background:${cor};color:white">${sit}</span></td><td>${d.conforme}</td><td>${d.naoConforme}</td></tr>`;}).join("")}
+      </tbody></table>
+
+      <h2>2. Acesso Biométrico</h2>
+      <table><thead><tr><th>Hospital</th><th>Percentual</th><th>Status</th><th>Responsável</th></tr></thead><tbody>
+        ${HOSPITAIS.map(h=>{const d=HISTORICO_MOCK[h.sigla][ultimoIdx];const cor=d.percentual>=90?"#00952A":d.percentual>=70?"#FF6700":"#ED282C";const sit=d.percentual>=90?"Conforme":d.percentual>=70?"Atenção":"Crítico";return`<tr><td>${h.nome}</td><td style="font-weight:700;color:${cor}">${d.percentual}%</td><td><span class="pill" style="background:${cor};color:white">${sit}</span></td><td>${d.responsavel}</td></tr>`;}).join("")}
+      </tbody></table>
+
+      <div class="pb"></div>
+
+      <h2>3. Indicadores de Proporção</h2>
+      <table><thead><tr><th>Hospital</th><th>Lanche/Pac.</th><th>Status</th><th>Acomp./Pac.</th><th>Status</th></tr></thead><tbody>
+        ${HOSPITAIS.map(h=>{const d=HISTORICO_MOCK[h.sigla][ultimoIdx];const corL=d.razaoLanche<=1.0?"#00952A":d.razaoLanche<=1.1?"#FF6700":"#ED282C";const corA=d.razaoAcomp<=3.0?"#00952A":d.razaoAcomp<=3.3?"#FF6700":"#ED282C";const sitL=d.razaoLanche<=1.0?"Conforme":d.razaoLanche<=1.1?"Atenção":"Crítico";const sitA=d.razaoAcomp<=3.0?"Conforme":d.razaoAcomp<=3.3?"Atenção":"Crítico";return`<tr><td>${h.nome}</td><td style="font-weight:700;color:${corL}">${d.razaoLanche?.toFixed(2)??"—"}</td><td><span class="pill" style="background:${corL};color:white">${sitL}</span></td><td style="font-weight:700;color:${corA}">${d.razaoAcomp?.toFixed(2)??"—"}</td><td><span class="pill" style="background:${corA};color:white">${sitA}</span></td></tr>`;}).join("")}
+      </tbody></table>
+
+      <h2>4. Pontos de Controle — Último Mês</h2>
+      <table><thead><tr><th>Ponto de controle</th>${HOSPITAIS.map(h=>`<th style="color:${h.cor}">${h.sigla}</th>`).join("")}</tr></thead><tbody>
+        ${ARTIGOS.map(item=>`<tr><td style="font-size:8pt">${item.titulo}</td>${HOSPITAIS.map(h=>{const s=HISTORICO_MOCK[h.sigla][ultimoIdx]?.statusItens[item.art];const cfg=s===STATUS.CONFORME?{i:"✓",c:"#00952A"}:{i:"✗",c:"#ED282C"};return`<td style="text-align:center;color:${cfg.c};font-weight:700">${cfg.i}</td>`;}).join("")}</tr>`).join("")}
+      </tbody></table>
+
+      <div class="footer">
+        <span>SCI — Sistema de Controle Interno · CGE-PE · Unidades de Controle Interno SES-PE</span>
+        <span>Gerado em ${agora}</span>
+      </div>`;
+
+    // Abrir nova aba com o PDF — mais compatível com iframes e artifact
+    const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+<title>Painel Alimentação Hospitalar — SCI</title>
+<style>
+  ${estilo.textContent}
+  #sci-pdf-root { display: block !important; }
+  body { margin: 0; background: white; }
+  .print-btn { position: fixed; top: 12px; right: 12px; background: #0C2856; color: white;
+    border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 14px;
+    font-family: Arial; font-weight: 600; z-index: 999; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+  .print-btn:hover { opacity: 0.9; }
+  @media print { .print-btn { display: none !important; } }
+</style></head><body>
+<button class="print-btn" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
+${div.outerHTML}
+</body></html>`;
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    setGerando(false);
+  }
+
+
   return (
     <TelaLayout>
-      <BarraTopo titulo="Painel de acompanhamento" onVoltar={onVoltar} />
+      <BarraTopo titulo="Painel de acompanhamento" onVoltar={onVoltar} onIrParaInicio={onIrParaInicio} />
 
       <main className="max-w-5xl mx-auto px-6 py-10 space-y-10">
+        {/* Botão Exportar PDF */}
+        <div className="flex justify-end">
+          <button
+            onClick={gerarPDFAlimentacao}
+            disabled={gerando}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-ui text-sm font-semibold transition-all hover:opacity-90 active:scale-95 no-print"
+            style={{ backgroundColor: "#0C2856", color: "white", boxShadow: "0 2px 10px rgba(12,40,86,0.25)" }}
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M8 2v8M5 7l3 3 3-3M2 12v1a1 1 0 001 1h10a1 1 0 001-1v-1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            {gerando ? "Gerando..." : "Exportar PDF"}
+          </button>
+        </div>
         {/* Banner: mês de referência */}
         {(() => {
           const ultimoIdx = Math.max(...HOSPITAIS.map((h) => HISTORICO_MOCK[h.sigla].length - 1));
@@ -2283,9 +2460,6 @@ function LegendaHospitais({ hospitaisFiltrados, corDestaque, labelDestaque }) {
 
 // ---------- Bloco 1: ICA — Índice de Controle de Alimentação ----------
 function BlocoGraficoICA({ hospital, hospitaisFiltrados, ponto, onSelecionarPonto }) {
-  const dado = ponto ? HISTORICO_ICA_MOCK[ponto.sigla][ponto.idx] : null;
-  const hospInfo = ponto ? HOSPITAIS.find((h) => h.sigla === ponto.sigla) : null;
-
   return (
     <section className="bg-white border border-[#E2E8F0] rounded-xl">
       <div className="border-b-2 border-[#E2E8F0] px-6 py-3 flex items-center justify-between flex-wrap gap-3">
@@ -2295,7 +2469,7 @@ function BlocoGraficoICA({ hospital, hospitaisFiltrados, ponto, onSelecionarPont
             ICA — Índice de Controle de Alimentação
           </h2>
         </div>
-        <p className="font-mono-label text-[11px] text-[#6B6357]">Conforme ÷ (Conforme + Não conforme), por mês</p>
+        <p className="font-mono-label text-[11px] text-[#6B6357]">Clique numa bolinha para ver o detalhamento</p>
       </div>
 
       <div className="p-6">
@@ -2314,47 +2488,41 @@ function BlocoGraficoICA({ hospital, hospitaisFiltrados, ponto, onSelecionarPont
           zonaIntermediaria={{ min: 60, max: 80, label: "Atenção 60–79%" }}
           zonaAlerta={{ min: 40, max: 60, label: "Crítico < 60%" }}
           apenasPonotos={true}
+          renderTooltip={(p) => {
+            const dado = HISTORICO_ICA_MOCK[p.sigla][p.idx];
+            const h = HOSPITAIS.find((h) => h.sigla === p.sigla);
+            return (
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="font-mono-label text-[11px] px-2 py-0.5 rounded font-bold text-white" style={{ backgroundColor: h.cor }}>{h.sigla}</span>
+                  <span className="font-ui text-xs text-[#6B7A8D]">{h.nome}</span>
+                </div>
+                <p className="font-mono-label text-[10px] uppercase tracking-wider text-[#6B7A8D] mb-1">{dado.label}</p>
+                <p className="font-display text-2xl font-bold mb-2" style={{ color: dado.ica >= 80 ? "#00952A" : dado.ica >= 60 ? "#FF6700" : "#ED282C" }}>{dado.ica}%</p>
+                <div className="text-xs font-ui space-y-0.5" style={{ color: "#4A5568" }}>
+                  <p>✓ Conforme: <strong>{dado.conforme}</strong></p>
+                  <p>✗ Não conforme: <strong>{dado.naoConforme}</strong></p>
+                </div>
+              </div>
+            );
+          }}
         />
         <LegendaHospitais hospitaisFiltrados={hospitaisFiltrados} />
       </div>
-
-      {dado ? (
-        <div className="border-t border-[#E2E8F0] p-6 bg-[#F4F7FA]">
-          <div className="flex items-baseline gap-2 flex-wrap mb-2">
-            <span className="font-mono-label text-[11px] uppercase tracking-wider px-2 py-1 border-2" style={{ borderColor: hospInfo.cor, color: hospInfo.cor }}>
-              {hospInfo.sigla}
-            </span>
-            <h3 className="font-ui font-semibold text-base">{dado.label}</h3>
-            <span className="font-mono-label text-sm font-semibold text-[#1C1A17]">{dado.ica}%</span>
-          </div>
-          <p className="font-mono-label text-[11px] text-[#6B6357]">
-            Conforme: {dado.conforme} · Não conforme: {dado.naoConforme}
-          </p>
-        </div>
-      ) : (
-        <div className="border-t border-[#E2E8F0] p-6 bg-[#F4F7FA]">
-          <p className="font-ui text-sm text-[#6B6357]">Selecione um ponto para ver o detalhamento do índice naquele mês.</p>
-        </div>
-      )}
     </section>
   );
 }
 
 // ---------- Bloco 2: Biometria (Art. 8º) ----------
 function BlocoGraficoBiometria({ hospital, hospitaisFiltrados, ponto, onSelecionarPonto }) {
-  const dado = ponto ? HISTORICO_MOCK[ponto.sigla][ponto.idx] : null;
-  const hospInfo = ponto ? HOSPITAIS.find((h) => h.sigla === ponto.sigla) : null;
-
   return (
     <section className="bg-white border border-[#E2E8F0] rounded-xl">
       <div className="border-b-2 border-[#E2E8F0] px-6 py-3 flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-2">
           <BarChart3 size={16} />
-          <h2 className="font-ui text-sm font-semibold uppercase tracking-wide">
-            Acesso biométrico
-          </h2>
+          <h2 className="font-ui text-sm font-semibold uppercase tracking-wide">Acesso biométrico</h2>
         </div>
-        <p className="font-mono-label text-[11px] text-[#6B6357]">Clique em um ponto para ver a justificativa do mês</p>
+        <p className="font-mono-label text-[11px] text-[#6B6357]">Clique numa bolinha para ver percentual e justificativa</p>
       </div>
 
       <div className="p-6">
@@ -2377,45 +2545,33 @@ function BlocoGraficoBiometria({ hospital, hospitaisFiltrados, ponto, onSelecion
           zonaIntermediaria={{ min: 70, max: 90, label: "Atenção 70–89%" }}
           zonaAlerta={{ min: 65, max: 70, label: "Crítico < 70%" }}
           apenasPonotos={true}
+          renderTooltip={(p) => {
+            const dado = HISTORICO_MOCK[p.sigla][p.idx];
+            const h = HOSPITAIS.find((h) => h.sigla === p.sigla);
+            const cor = dado.percentual >= META_BIOMETRIA ? "#00952A" : dado.percentual >= 70 ? "#FF6700" : "#ED282C";
+            return (
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="font-mono-label text-[11px] px-2 py-0.5 rounded font-bold text-white" style={{ backgroundColor: h.cor }}>{h.sigla}</span>
+                  <span className="font-ui text-xs text-[#6B7A8D]">{h.nome}</span>
+                </div>
+                <p className="font-mono-label text-[10px] uppercase tracking-wider text-[#6B7A8D] mb-1">{dado.label}</p>
+                <p className="font-display text-2xl font-bold mb-2" style={{ color: cor }}>{dado.percentual}%</p>
+                {dado.abaixoDaMeta ? (
+                  <div className="text-xs font-ui space-y-1.5 border-t border-[#E2E8F0] pt-2 mt-1" style={{ color: "#4A5568" }}>
+                    <p className="flex gap-1"><AlertTriangle size={12} className="text-[#ED282C] flex-shrink-0 mt-0.5"/><span><strong>Motivo:</strong> {dado.motivo}</span></p>
+                    <p><strong>Ações pactuadas:</strong> {dado.acoes}</p>
+                    <p className="text-[#6B7A8D]">Responsável: {dado.responsavel}</p>
+                  </div>
+                ) : (
+                  <p className="text-xs font-ui text-[#00952A]">✓ Dentro da meta — sem justificativa necessária</p>
+                )}
+              </div>
+            );
+          }}
         />
         <LegendaHospitais hospitaisFiltrados={hospitaisFiltrados} corDestaque="#ED282C" labelDestaque="ponto abaixo da meta" />
       </div>
-
-      {dado ? (
-        <div className="border-t border-[#E2E8F0] p-6 bg-[#F4F7FA]">
-          <div className="flex items-baseline gap-2 flex-wrap mb-3">
-            <span className="font-mono-label text-[11px] uppercase tracking-wider px-2 py-1 border-2" style={{ borderColor: hospInfo.cor, color: hospInfo.cor }}>
-              {hospInfo.sigla}
-            </span>
-            <h3 className="font-ui font-semibold text-base">{dado.label}</h3>
-            <span className={`font-mono-label text-sm font-semibold ${dado.abaixoDaMeta ? "text-[#ED282C]" : "text-[#1F5A4A]"}`}>
-              {dado.percentual}%
-            </span>
-            {percentualBadge(dado.percentual, META_BIOMETRIA)}
-          </div>
-
-          {dado.abaixoDaMeta ? (
-            <div className="space-y-2 max-w-2xl">
-              <div className="flex gap-2 items-start">
-                <AlertTriangle size={15} className="text-[#ED282C] mt-0.5 flex-shrink-0" />
-                <p className="font-ui text-sm">
-                  <span className="font-medium">Motivo do não atingimento:</span> {dado.motivo}
-                </p>
-              </div>
-              <p className="font-ui text-sm pl-[23px]">
-                <span className="font-medium">Ações pactuadas com o gestor:</span> {dado.acoes}
-              </p>
-              <p className="font-mono-label text-[11px] text-[#6B6357] pl-[23px]">Responsável: {dado.responsavel}</p>
-            </div>
-          ) : (
-            <p className="font-ui text-sm text-[#2B2723]">Percentual dentro da meta — sem necessidade de justificativa para este mês.</p>
-          )}
-        </div>
-      ) : (
-        <div className="border-t border-[#E2E8F0] p-6 bg-[#F4F7FA]">
-          <p className="font-ui text-sm text-[#6B6357]">Selecione um ponto no gráfico para ver o percentual apurado e a justificativa daquele mês.</p>
-        </div>
-      )}
     </section>
   );
 }
@@ -3264,7 +3420,7 @@ function TelaHomeMedicamentos({ onIrPara, onVoltarProduto }) {
 
 
 // ---------- Monitoramento de Medicamentos: escolha do estoque + inventário + acurácia ----------
-function TelaMonitoramentoMedicamentos({ onVoltar, estoques, setEstoques, historicoPorEstoque, setHistoricoPorEstoque }) {
+function TelaMonitoramentoMedicamentos({ onVoltar, onIrParaInicio, estoques, setEstoques, historicoPorEstoque, setHistoricoPorEstoque }) {
   const [estoqueId, setEstoqueId] = useState(null);
   const [acaoAtiva, setAcaoAtiva] = useState(null); // null | "inventario" | "acuracia"
   const [showAddSetor, setShowAddSetor] = useState(false);
@@ -3309,7 +3465,7 @@ function TelaMonitoramentoMedicamentos({ onVoltar, estoques, setEstoques, histor
   if (!estoqueAtual) {
     return (
       <TelaLayout>
-      <BarraTopo titulo="Realizar monitoramento" onVoltar={onVoltar} produto="Medicamentos" />
+      <BarraTopo titulo="Realizar monitoramento" onVoltar={onVoltar} produto="Medicamentos" onIrParaInicio={onIrParaInicio} />
 
         <main className="max-w-3xl mx-auto px-6 py-14">
           <div className="flex items-start justify-between gap-4 mb-2 flex-wrap">
@@ -3401,7 +3557,7 @@ function TelaMonitoramentoMedicamentos({ onVoltar, estoques, setEstoques, histor
   if (acaoAtiva === "inventario") {
     return (
       <TelaLayout>
-      <BarraTopo titulo="Realizar monitoramento" onVoltar={() => { setEstoqueId(null); setAcaoAtiva(null); }} produto="Medicamentos" />
+      <BarraTopo titulo="Realizar monitoramento" onVoltar={() => { setEstoqueId(null); setAcaoAtiva(null); }} produto="Medicamentos" onIrParaInicio={onIrParaInicio} />
         <main className="max-w-2xl mx-auto px-6 py-10">
           <div className="mb-6">
             <p className="font-mono-label text-[11px] uppercase tracking-wider text-[#6B6357]">{estoqueAtual.nome}</p>
@@ -3883,7 +4039,114 @@ function FormularioVerificacaoAcuracia({ estoqueId, historico, inventarios, onRe
 }
 
 // ---------- Painel de Medicamentos (placeholder inicial) ----------
-function TelaPainelMedicamentos({ onVoltar, estoques, historicoPorEstoque }) {
+function TelaPainelMedicamentos({ onVoltar, onIrParaInicio, estoques, historicoPorEstoque }) {
+  const [gerando, setGerando] = React.useState(false);
+
+  function gerarPDFMedicamentos() {
+    setGerando(true);
+    const agora = new Date().toLocaleString("pt-BR");
+
+    const estilo = document.createElement("style");
+    estilo.id = "sci-pdf-med-style";
+    estilo.textContent = `@media print{body > *:not(#sci-pdf-med){display:none!important}#sci-pdf-med{display:block!important}@page{margin:18mm 14mm;size:A4}}
+    #sci-pdf-med{display:none;font-family:Arial,sans-serif;color:#0C2856;font-size:10.5pt;line-height:1.4}
+    #sci-pdf-med h1{font-size:17pt;font-weight:700;margin:0 0 3px}
+    #sci-pdf-med h2{font-size:11pt;font-weight:700;margin:14px 0 6px;border-bottom:2px solid #0068FF;padding-bottom:3px}
+    #sci-pdf-med table{width:100%;border-collapse:collapse;font-size:8.5pt;margin-bottom:12px}
+    #sci-pdf-med th{background:#0C2856;color:white;padding:4px 7px;text-align:left;font-size:7.5pt}
+    #sci-pdf-med td{padding:3px 7px;border-bottom:1px solid #E2E8F0}
+    #sci-pdf-med tr:nth-child(even) td{background:#F4F7FA}
+    #sci-pdf-med .pill{display:inline-block;padding:1px 5px;border-radius:3px;font-size:7.5pt;font-weight:700}
+    #sci-pdf-med .bar{height:3px;display:flex;margin-bottom:12px}
+    #sci-pdf-med .bar span{flex:1}
+    #sci-pdf-med .footer{position:fixed;bottom:8mm;left:14mm;right:14mm;font-size:7.5pt;color:#6B7A8D;display:flex;justify-content:space-between;border-top:1px solid #E2E8F0;padding-top:3px}`;
+    const cores = ["#0068FF","#3AE8C6","#4AE23D","#FFCE00","#FF6700","#ED282C"];
+    const CORES_SETOR = ["#0C2856","#ED282C","#4AE23D","#4400FF","#00B7FF","#FF6700","#FFCE00"];
+
+    function mediaUltimos3(verificacoes) {
+      if (!verificacoes.length) return null;
+      const ult = verificacoes.slice(-3);
+      return Math.round(ult.reduce((s,v)=>s+v.percentual,0)/ult.length*10)/10;
+    }
+    function statusSetor(media) {
+      if (media===null) return {label:"—",cor:"#6B7A8D",bg:"#E2E8F0"};
+      if (media>=95) return {label:"META",cor:"#00952A",bg:"#E8F5E9"};
+      if (media>=80) return {label:"ATENÇÃO",cor:"#FF6700",bg:"#FFF3E0"};
+      return {label:"CRÍTICO",cor:"#ED282C",bg:"#FFEBEE"};
+    }
+    function periodicidade(media) {
+      if (media===null) return "—";
+      if (media>=95) return "Trimestral";
+      if (media>=80) return "Bimestral";
+      return "Mensal";
+    }
+
+    const div = document.createElement("div");
+    div.id = "sci-pdf-med";
+    div.innerHTML = `
+      <div class="bar">${cores.map(c=>`<span style="background:${c}"></span>`).join("")}</div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;padding-bottom:10px;border-bottom:3px solid #0068FF">
+        <div>
+          <h1>Painel de Medicamentos</h1>
+          <p style="margin:2px 0;color:#0068FF;font-size:10pt;font-weight:600">Controladoria-Geral do Estado de Pernambuco</p>
+          <p style="margin:0;color:#6B7A8D;font-size:8.5pt">Unidades de Controle Interno — SES-PE</p>
+        </div>
+        <div style="text-align:right;font-size:8pt;color:#6B7A8D">
+          <div>Gerado em: <strong>${agora}</strong></div>
+        </div>
+      </div>
+
+      <h2>1. Acurácia por Setor</h2>
+      <table><thead><tr><th>Setor</th><th>Média acurácia (últ. 3)</th><th>Status</th><th>Periodicidade sugerida</th></tr></thead><tbody>
+        ${estoques.map((e,si)=>{
+          const verifs=(historicoPorEstoque[e.id]?.verificacoes||[]);
+          const media=mediaUltimos3(verifs);
+          const st=statusSetor(media);
+          return`<tr><td>${e.nome}</td><td style="font-weight:700;color:${st.cor}">${media!==null?media+"%":"—"}</td><td><span class="pill" style="background:${st.cor};color:white">${st.label}</span></td><td style="font-weight:600;color:${st.cor}">${periodicidade(media)}</td></tr>`;
+        }).join("")}
+      </tbody></table>
+
+      <h2>2. Inventários Realizados</h2>
+      <table><thead><tr><th>Setor</th><th>Qtd. inventários</th><th>Periodicidade realizada</th><th>Periodicidade sugerida</th></tr></thead><tbody>
+        ${estoques.map((e,si)=>{
+          const invs=(historicoPorEstoque[e.id]?.inventarios||[]);
+          const qtd=invs.length;
+          const PERIODO=7*30;
+          const mediaDias=qtd>0?Math.round(PERIODO/qtd):null;
+          const verifs=(historicoPorEstoque[e.id]?.verificacoes||[]);
+          const media=mediaUltimos3(verifs);
+          const per=periodicidade(media);
+          return`<tr><td>${e.nome}</td><td style="text-align:center">${qtd}</td><td>${mediaDias!==null?"a cada ~"+mediaDias+" dias":"—"}</td><td style="font-weight:600">${per}</td></tr>`;
+        }).join("")}
+      </tbody></table>
+
+      <div class="footer">
+        <span>SCI — Sistema de Controle Interno · CGE-PE · Unidades de Controle Interno SES-PE</span>
+        <span>Gerado em ${agora}</span>
+      </div>`;
+
+    const html2 = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+<title>Painel Medicamentos — SCI</title>
+<style>
+  ${estilo.textContent}
+  #sci-pdf-med { display: block !important; }
+  body { margin: 0; background: white; }
+  .print-btn { position: fixed; top: 12px; right: 12px; background: #0C2856; color: white;
+    border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 14px;
+    font-family: Arial; font-weight: 600; z-index: 999; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+  .print-btn:hover { opacity: 0.9; }
+  @media print { .print-btn { display: none !important; } }
+</style></head><body>
+<button class="print-btn" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
+${div.outerHTML}
+</body></html>`;
+    const blob2 = new Blob([html2], { type: 'text/html;charset=utf-8' });
+    const url2 = URL.createObjectURL(blob2);
+    window.open(url2, '_blank');
+    setTimeout(() => URL.revokeObjectURL(url2), 10000);
+    setGerando(false);
+  }
+
   // Dados: ordem cronológica por setor (mais antigo primeiro)
   const dadosPorSetor = estoques.map((e) => {
     const lista = (historicoPorEstoque[e.id]?.verificacoes || []).slice().reverse();
@@ -3942,9 +4205,22 @@ function TelaPainelMedicamentos({ onVoltar, estoques, historicoPorEstoque }) {
 
   return (
     <TelaLayout>
-      <BarraTopo titulo="Painel de acompanhamento" onVoltar={onVoltar} produto="Medicamentos" />
+      <BarraTopo titulo="Painel de acompanhamento" onVoltar={onVoltar} produto="Medicamentos" onIrParaInicio={onIrParaInicio} />
 
       <main className="max-w-6xl mx-auto px-4 py-8 space-y-6">
+        <div className="flex justify-end no-print">
+          <button
+            onClick={gerarPDFMedicamentos}
+            disabled={gerando}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-ui text-sm font-semibold transition-all hover:opacity-90 active:scale-95"
+            style={{ backgroundColor: "#0C2856", color: "white", boxShadow: "0 2px 10px rgba(12,40,86,0.25)" }}
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M8 2v8M5 7l3 3 3-3M2 12v1a1 1 0 001 1h10a1 1 0 001-1v-1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            {gerando ? "Gerando..." : "Exportar PDF"}
+          </button>
+        </div>
         {/* Gráfico principal */}
         <div className="bg-white rounded-2xl border border-[#E2E8F0] overflow-hidden" style={{ boxShadow: "0 2px 16px rgba(12,40,86,0.06)" }}>
           <div className="px-6 py-4 border-b border-[#E2E8F0]">
@@ -4255,13 +4531,16 @@ export default function App() {
     return JSON.parse(JSON.stringify(HISTORICO_MEDICAMENTOS_MOCK));
   });
 
-  if (tela === "monitoramento") return <TelaMonitoramento onVoltar={() => setTela("alimentacao")} />;
-  if (tela === "painel") return <TelaPainel onVoltar={() => setTela("alimentacao")} />;
+  const irParaInicio = () => setTela("selecaoProduto");
+
+  if (tela === "monitoramento") return <TelaMonitoramento onVoltar={() => setTela("alimentacao")} onIrParaInicio={irParaInicio} />;
+  if (tela === "painel") return <TelaPainel onVoltar={() => setTela("alimentacao")} onIrParaInicio={irParaInicio} />;
   if (tela === "alimentacao") return <TelaHome onIrPara={setTela} onVoltarProduto={() => setTela("selecaoProduto")} />;
   if (tela === "monitoramentoMedicamentos") {
     return (
       <TelaMonitoramentoMedicamentos
         onVoltar={() => setTela("medicamentos")}
+        onIrParaInicio={irParaInicio}
         estoques={estoquesMedicamentos}
         setEstoques={setEstoquesMedicamentos}
         historicoPorEstoque={historicoMedicamentos}
@@ -4273,6 +4552,7 @@ export default function App() {
     return (
       <TelaPainelMedicamentos
         onVoltar={() => setTela("medicamentos")}
+        onIrParaInicio={irParaInicio}
         estoques={estoquesMedicamentos}
         historicoPorEstoque={historicoMedicamentos}
       />
