@@ -53,14 +53,14 @@ const ARTIGOS = [
     art: "Indicador",
     titulo: "Proporção lanche/paciente (média diária)",
     texto:
-      "Informar a média diária de lanches fornecidos e a média diária de pacientes internados no período. O lanche destina-se exclusivamente ao paciente — acompanhante não recebe. A razão (lanches ÷ pacientes) deve ser igual a 1,0. Acima de 1,0 é não conforme; acima de 1,1 exige justificativa obrigatória.",
+      "Informar a quantidade de lanches fornecidos no mês e a quantidade de pacientes internados no mês. O lanche destina-se exclusivamente ao paciente — acompanhante não recebe. A meta é 3,0 lanches por paciente (3 lanches/dia). Conforme: até 3,15 (tolerância de 5%). Não conforme com justificativa obrigatória: acima de 3,30 (tolerância de 10%).",
     metricoLanche: true,
   },
   {
     art: "Indicador 2",
     titulo: "Proporção refeições de acompanhante por paciente (média diária)",
     texto:
-      "Cada paciente tem direito a 1 acompanhante com 3 refeições/dia. A razão ideal é: média diária de refeições de acompanhante ÷ média diária de pacientes = 3,0. Acima de 3,0 indica que mais pessoas estão se alimentando do que o previsto ou que acompanhantes estão recebendo mais de 3 refeições por dia. Acima de 3,3 exige justificativa obrigatória.",
+      "Informar a quantidade de refeições de acompanhante no mês e a quantidade de pacientes internados no mês. A meta é 3,0 refeições por paciente. Conforme: até 3,15 (tolerância de 5%). Não conforme com justificativa obrigatória: acima de 3,30 (tolerância de 10%).",
     metricoAcomp: true,
   },
   {
@@ -152,6 +152,16 @@ const SERVIDORES_UCI = [
 ];
 
 // ---------- Domínio: Medicamentos ----------
+
+// Gera iniciais do nome do setor para bolinhas no gráfico
+function iniciaisSetor(nome) {
+  return nome.split(/\s+/)
+    .filter(w => w.length > 2 && !["da","de","do","das","dos","e"].includes(w.toLowerCase()))
+    .slice(0, 3)
+    .map(w => w[0].toUpperCase())
+    .join("");
+}
+
 const ESTOQUES_MEDICAMENTOS = [
   { id: "farmacia-emergencia-clinica", nome: "Farmácia da Emergência Clínica", responsavelPadrao: "Gerência de Farmácia" },
   { id: "farmacia-emergencia-trauma", nome: "Farmácia da Emergência do Trauma", responsavelPadrao: "Gerência de Farmácia" },
@@ -168,44 +178,92 @@ const LIMITE_CRITICO_ACURACIA = 80; // abaixo disso, recomenda-se inventário im
 // Histórico de exemplo dos verificações de acurácia por setor, para já demonstrar a matriz do Painel
 // preenchida. Cada setor tem uma quantidade diferente de testes já realizados (2 a 5), e os
 // percentuais variam o suficiente para incluir casos dentro da meta, abaixo da meta e críticos.
+// Categorias de exemplo por setor — distribuição realista para farmácia hospitalar
+// Alguns setores têm 2 categorias, outros 1 (sem categorias = setor inteiro)
+const CATEGORIAS_MEDICAMENTOS_MOCK = {
+  "farmacia-emergencia-clinica": [
+    { nome: "Alto Custo" },
+    { nome: "Uso Geral" },
+  ],
+  "farmacia-emergencia-trauma": [
+    { nome: "Alto Custo" },
+    { nome: "Uso Geral" },
+  ],
+  "farmacia-bloco": [
+    { nome: "Anestésicos" },
+    { nome: "Materiais Cirúrgicos" },
+  ],
+  "dispensacao-material-medico": [], // sem categorias
+  "dispensacao-medicamentos": [
+    { nome: "Antimicrobianos" },
+    { nome: "Demais Medicamentos" },
+  ],
+  "farmacia-endoscopia": [], // sem categorias
+  "farmacia-hemodinamica": [
+    { nome: "Anticoagulantes" },
+    { nome: "Demais Medicamentos" },
+  ],
+};
+
 function gerarHistoricoAcuraciaMedicamentosMock() {
-  const quantidadeTestesPorSetor = [5, 2, 4, 3, 5, 2, 4]; // alinhado com a ordem de ESTOQUES_MEDICAMENTOS
-  const quantidadeInventariosPorSetor = [4, 6, 2, 5, 3, 7, 4]; // independente da quantidade de verificações de acurácia
   const hoje = new Date();
   const resultado = {};
 
+  // Configurações por setor: [qtdVerif, qtdInv, baselineAcuracia]
+  const config = {
+    "farmacia-emergencia-clinica": { baselines: [96, 94], qtdVerifs: [5, 3], qtdInvs: [4, 2] },
+    "farmacia-emergencia-trauma":  { baselines: [91, 88], qtdVerifs: [2, 3], qtdInvs: [3, 3] },
+    "farmacia-bloco":              { baselines: [78, 83], qtdVerifs: [4, 2], qtdInvs: [1, 1] },
+    "dispensacao-material-medico": { baselines: [97],     qtdVerifs: [3],    qtdInvs: [5]    },
+    "dispensacao-medicamentos":    { baselines: [88, 92], qtdVerifs: [5, 3], qtdInvs: [2, 1] },
+    "farmacia-endoscopia":         { baselines: [99],     qtdVerifs: [2],    qtdInvs: [7]    },
+    "farmacia-hemodinamica":       { baselines: [84, 79], qtdVerifs: [4, 2], qtdInvs: [2, 2] },
+  };
+
   ESTOQUES_MEDICAMENTOS.forEach((setor, idx) => {
-    const rand = seededRandom(4200 + idx * 17);
-    const baseline = [96, 91, 78, 97, 88, 99, 84][idx] ?? 92; // tendência própria de cada setor
-    const qtd = quantidadeTestesPorSetor[idx];
-    const verificacoes = [];
+    const cats = CATEGORIAS_MEDICAMENTOS_MOCK[setor.id] || [];
+    const cfg = config[setor.id];
 
-    for (let i = 0; i < qtd; i++) {
-      const variacao = (rand() - 0.5) * 14;
-      let pct = Math.round((baseline + variacao) * 10) / 10;
-      pct = Math.max(60, Math.min(100, pct));
-      const d = new Date(hoje.getFullYear(), hoje.getMonth() - (qtd - i) * 1, 10 + i);
-      verificacoes.unshift({
-        data: d.toISOString().slice(0, 10),
-        percentual: pct,
-        aplicadoPor: "UCI — Equipe de Auditoria",
+    if (cats.length === 0) {
+      // Sem categorias: registra direto no setor
+      const rand = seededRandom(4200 + idx * 17);
+      const baseline = cfg.baselines[0];
+      const qtd = cfg.qtdVerifs[0];
+      const verificacoes = [];
+      for (let i = 0; i < qtd; i++) {
+        const pct = Math.max(60, Math.min(100, Math.round((baseline + (rand() - 0.5) * 14) * 10) / 10));
+        const d = new Date(hoje.getFullYear(), hoje.getMonth() - (qtd - i), 10 + i);
+        verificacoes.unshift({ data: d.toISOString().slice(0, 10), percentual: pct, aplicadoPor: "UCI — Equipe de Auditoria" });
+      }
+      const randInv = seededRandom(7700 + idx * 31);
+      const qtdInv = cfg.qtdInvs[0];
+      const inventarios = [];
+      for (let i = 0; i < qtdInv; i++) {
+        const d = new Date(hoje.getFullYear(), hoje.getMonth() - (qtdInv - i), 5 + i);
+        inventarios.unshift({ data: d.toISOString().slice(0, 10), responsavel: setor.responsavelPadrao, linkRelatorio: "", observacoes: "" });
+      }
+      resultado[setor.id] = { inventarios, verificacoes };
+    } else {
+      // Com categorias: registra por chave "setor.id:categoria.nome"
+      cats.forEach((cat, ci) => {
+        const rand = seededRandom(4200 + idx * 17 + ci * 53);
+        const baseline = cfg.baselines[ci] ?? cfg.baselines[0];
+        const qtd = cfg.qtdVerifs[ci] ?? 2;
+        const verificacoes = [];
+        for (let i = 0; i < qtd; i++) {
+          const pct = Math.max(60, Math.min(100, Math.round((baseline + (rand() - 0.5) * 14) * 10) / 10));
+          const d = new Date(hoje.getFullYear(), hoje.getMonth() - (qtd - i), 10 + i);
+          verificacoes.unshift({ data: d.toISOString().slice(0, 10), percentual: pct, aplicadoPor: "UCI — Equipe de Auditoria", categoriaId: cat.nome });
+        }
+        const qtdInv = cfg.qtdInvs[ci] ?? 2;
+        const inventarios = [];
+        for (let i = 0; i < qtdInv; i++) {
+          const d = new Date(hoje.getFullYear(), hoje.getMonth() - (qtdInv - i), 5 + i);
+          inventarios.unshift({ data: d.toISOString().slice(0, 10), responsavel: setor.responsavelPadrao, linkRelatorio: "", observacoes: "", categoriaId: cat.nome });
+        }
+        resultado[`${setor.id}:${cat.nome}`] = { inventarios, verificacoes };
       });
     }
-
-    const randInv = seededRandom(7700 + idx * 31);
-    const qtdInv = quantidadeInventariosPorSetor[idx];
-    const inventarios = [];
-    for (let i = 0; i < qtdInv; i++) {
-      const d = new Date(hoje.getFullYear(), hoje.getMonth() - (qtdInv - i), 5 + i);
-      inventarios.unshift({
-        data: d.toISOString().slice(0, 10),
-        responsavel: setor.responsavelPadrao,
-        linkRelatorio: "",
-        observacoes: "",
-      });
-    }
-
-    resultado[setor.id] = { inventarios, verificacoes };
   });
 
   return resultado;
@@ -250,7 +308,7 @@ function mensagemPendencia({ progresso, responsavel, percentualPreenchido, justi
   if (!percentualPreenchido) pendencias.push("percentual de biometria");
   if (!justificativaBiometriaCompleta) pendencias.push("motivo e ações pactuadas do indicador de biometria (percentual crítico)");
   if (!lanchePreenchido) pendencias.push("médias diárias do indicador de proporção lanche/paciente");
-  if (!justificativaLancheCompleta) pendencias.push("justificativa obrigatória do indicador de proporção lanche/paciente (razão acima de 1,1)");
+  if (!justificativaLancheCompleta) pendencias.push("justificativa obrigatória do indicador de proporção lanche/paciente (razão acima de 3,30)");
   if (!acompPreenchido) pendencias.push("médias diárias do indicador de refeições de acompanhante por paciente");
   if (!justificativaAcompCompleta) pendencias.push("justificativa obrigatória do indicador de refeições de acompanhante (razão acima de 3,3)");
   return "Falta preencher: " + pendencias.join(", ");
@@ -291,7 +349,7 @@ function gerarHistorico(numMeses = 7) {
     // base de comportamento distinta por hospital, pra ficar visualmente legível
     const baseline = [94, 91, 88, 96, 85, 92][hIdx] ?? 90;
     // baselines dos indicadores de proporção: alguns hospitais têm tendência a distorção
-    const baselineLanche = [0.98, 1.05, 1.12, 0.97, 1.08, 1.01][hIdx] ?? 1.0;
+    const baselineLanche = [2.95, 3.08, 3.35, 2.93, 3.18, 3.02][hIdx] ?? 3.0;
     const baselineAcomp  = [2.95, 3.15, 3.40, 2.90, 3.25, 3.05][hIdx] ?? 3.0;
     for (let i = numMeses - 1; i >= 0; i--) {
       const d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
@@ -565,20 +623,25 @@ function GraficoSerieHistorica({
   }
 
   function handleDotClick(e, sigla, idx) {
+    e.stopPropagation();
+    // Clicando no mesmo ponto já selecionado: fecha o tooltip
+    if (pontoSelecionado && pontoSelecionado.sigla === sigla && pontoSelecionado.idx === idx) {
+      onSelecionarPonto(null);
+      setTooltipPos(null);
+      return;
+    }
     const svg = e.currentTarget.closest('svg');
-    const rect = svg.getBoundingClientRect();
-    const cx = e.currentTarget.querySelector('circle').cx.baseVal.value;
-    const cy = e.currentTarget.querySelector('circle').cy.baseVal.value;
     const vb = largura;
     const vbH = altura;
-    const pctX = (cx / vb) * 100;
-    const pctY = (cy / vbH) * 100;
-    setTooltipPos({ pctX, pctY });
+    const circle = e.currentTarget.querySelector('circle');
+    const cx = circle.cx.baseVal.value;
+    const cy = circle.cy.baseVal.value;
+    setTooltipPos({ pctX: (cx / vb) * 100, pctY: (cy / vbH) * 100 });
     onSelecionarPonto({ sigla, idx });
   }
 
   return (
-    <div className="overflow-x-auto relative" onClick={(e) => { if (e.target === e.currentTarget) { setTooltipPos(null); onSelecionarPonto(null); } }}>
+    <div className="overflow-x-auto relative" onClick={() => { onSelecionarPonto(null); setTooltipPos(null); }}>
       <div className="relative min-w-[600px]">
         <svg viewBox={`0 0 ${largura} ${altura}`} className="w-full" role="img" aria-label={ariaLabel}>
           {zonaOtima && <rect x={margem.left} y={y(Math.min(zonaOtima.max, yMax))} width={innerW} height={y(Math.max(zonaOtima.min, yMin)) - y(Math.min(zonaOtima.max, yMax))} fill="#4AE23D" fillOpacity="0.13"/>}
@@ -1066,7 +1129,7 @@ function FontesGlobais() {
   );
 }
 
-function BarraTopo({ titulo, onVoltar, produto = "Alimentação Hospitalar", onIrParaInicio }) {
+function BarraTopo({ titulo, onVoltar, produto = "Alimentação Hospitalar", onIrParaInicio, sessao }) {
   return (
     <>
       <header style={{ backgroundColor: "#0C2856" }}>
@@ -1079,7 +1142,9 @@ function BarraTopo({ titulo, onVoltar, produto = "Alimentação Hospitalar", onI
             <div className="w-px h-6" style={{ backgroundColor: "rgba(255,255,255,0.2)" }} />
             <div className="min-w-0">
               <p className="font-ui text-sm font-semibold text-white leading-tight truncate">{titulo}</p>
-              <p className="font-mono-label text-[10px] uppercase tracking-wide truncate" style={{ color: "rgba(255,255,255,0.55)" }}>{produto} · UCI-SES-PE</p>
+              <p className="font-mono-label text-[10px] uppercase tracking-wide truncate" style={{ color: "rgba(255,255,255,0.55)" }}>
+                {sessao ? `${sessao.hospitalSigla} · ${sessao.nome}` : `${produto} · UCI-SES-PE`}
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -1088,7 +1153,6 @@ function BarraTopo({ titulo, onVoltar, produto = "Alimentação Hospitalar", onI
                 onClick={onIrParaInicio}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all hover:opacity-90"
                 style={{ backgroundColor: "rgba(255,255,255,0.12)", color: "white", border: "1px solid rgba(255,255,255,0.2)" }}
-                aria-label="Tela inicial"
               >
                 <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
                   <path d="M2 6.5L8 2l6 4.5V14a1 1 0 01-1 1H3a1 1 0 01-1-1V6.5z" stroke="white" strokeWidth="1.5" strokeLinejoin="round"/>
@@ -1100,7 +1164,6 @@ function BarraTopo({ titulo, onVoltar, produto = "Alimentação Hospitalar", onI
             <img src={LOGO_SCI_BASE64} alt="SCI — Sistema de Controle Interno" style={{ height: 32 }} className="flex-shrink-0" />
           </div>
         </div>
-        {/* Barra colorida Gov-PE */}
         <div className="flex h-1">
           {["#0068FF","#3AE8C6","#4AE23D","#FFCE00","#FF6700","#ED282C"].map(c => (
             <div key={c} className="flex-1" style={{ backgroundColor: c }} />
@@ -1108,7 +1171,6 @@ function BarraTopo({ titulo, onVoltar, produto = "Alimentação Hospitalar", onI
         </div>
       </header>
 
-      {/* Botão flutuante */}
       <button onClick={onVoltar} aria-label="Voltar"
         className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 shadow-lg transition-all hover:opacity-90 active:scale-95"
         style={{ backgroundColor: "#0C2856", color: "white", border: "2px solid #0068FF", borderRadius: "12px" }}>
@@ -1156,7 +1218,7 @@ function TelaLayout({ children }) {
 
 
 // ---------- Tela: Monitoramento (formulário) ----------
-function TelaMonitoramento({ onVoltar, onIrParaInicio }) {
+function TelaMonitoramento({ onVoltar, onIrParaInicio, sessao }) {
   const [aba, setAba] = useState(null); // null | "checklist" | "consumo"
 
   if (aba === null) {
@@ -1214,17 +1276,17 @@ function TelaMonitoramento({ onVoltar, onIrParaInicio }) {
         </p>
       </div>
 
-      {aba === "checklist" ? <AbaChecklist /> : <AbaInserirConsumo />}
+      {aba === "checklist" ? <AbaChecklist sessao={sessao} /> : <AbaInserirConsumo sessao={sessao} />}
     </TelaLayout>
   );
 }
 
-function AbaChecklist() {
+function AbaChecklist({ sessao }) {
   const now = new Date();
-  const [hospital, setHospital] = useState(HOSPITAIS[0].sigla);
+  const [hospital, setHospital] = useState(sessao?.hospitalSigla || HOSPITAIS[0].sigla);
   const [mesRef, setMesRef] = useState(now.getMonth());
   const [anoRef, setAnoRef] = useState(now.getFullYear());
-  const [responsavel, setResponsavel] = useState(RESPONSAVEL_POR_HOSPITAL[HOSPITAIS[0].sigla] || "");
+  const [responsavel, setResponsavel] = useState(sessao?.nome || RESPONSAVEL_POR_HOSPITAL[sessao?.hospitalSigla || HOSPITAIS[0].sigla] || "");
 
   // Sincronização automática hospital ↔ responsável
   function handleHospitalChange(sigla) {
@@ -1272,8 +1334,8 @@ function AbaChecklist() {
     lancheNum !== null && pacienteNum !== null && !Number.isNaN(lancheNum) && !Number.isNaN(pacienteNum) && pacienteNum > 0
       ? Math.round((lancheNum / pacienteNum) * 100) / 100
       : null;
-  const lancheNaoConforme = razaoLanche !== null && razaoLanche > 1.0;
-  const lancheCritico = razaoLanche !== null && razaoLanche > 1.1;
+  const lancheNaoConforme = razaoLanche !== null && razaoLanche > 3.15;
+  const lancheCritico = razaoLanche !== null && razaoLanche > 3.30;
   const lanchePreenchido = lancheNum !== null && pacienteNum !== null && !Number.isNaN(lancheNum) && !Number.isNaN(pacienteNum) && pacienteNum > 0;
   const justificativaLancheCompleta = !lancheCritico || justificativaLanche.trim().length > 0;
 
@@ -1340,7 +1402,7 @@ function AbaChecklist() {
     if (razaoLanche !== null) {
       setRespostas((prev) => ({
         ...prev,
-        "Indicador": razaoLanche <= 1.0 ? STATUS.CONFORME : STATUS.NAO_CONFORME,
+        "Indicador": razaoLanche !== null && razaoLanche <= 3.15 ? STATUS.CONFORME : STATUS.NAO_CONFORME,
       }));
     }
   }, [razaoLanche]);
@@ -1616,11 +1678,21 @@ function AbaChecklist() {
                     )}
 
                     {item.metricoLanche && (
+                      <div className="mt-3 p-3 rounded-lg text-xs font-mono-label space-y-1" style={{ backgroundColor: "#F0F9FF", border: "1px solid #BBDEFB" }}>
+                        <p className="font-semibold mb-1.5" style={{ color: "#0C2856" }}>Legenda — proporção lanche/paciente</p>
+                        <p><span className="inline-block w-2.5 h-2.5 rounded-full mr-1.5" style={{ backgroundColor: "#00952A" }} />≤ 3,15 — Conforme (tolerância 5%)</p>
+                        <p><span className="inline-block w-2.5 h-2.5 rounded-full mr-1.5" style={{ backgroundColor: "#FF6700" }} />3,16 a 3,30 — Não conforme</p>
+                        <p><span className="inline-block w-2.5 h-2.5 rounded-full mr-1.5" style={{ backgroundColor: "#ED282C" }} />&gt; 3,30 — Não conforme + justificativa obrigatória (acima de 10%)</p>
+                        <p className="text-[#6B7A8D] mt-1">Fórmula: total de lanches do mês ÷ total de pacientes internados no mês</p>
+                      </div>
+                    )}
+
+                    {item.metricoLanche && (
                       <div className="mt-4 max-w-2xl">
                         <div className="flex items-end gap-4 flex-wrap">
                           <div>
                             <label className="font-mono-label text-[11px] uppercase tracking-wider text-[#6B6357] block mb-2">
-                              Média diária de lanches fornecidos
+                              Lanches fornecidos no mês
                             </label>
                             <input
                               type="number"
@@ -1635,7 +1707,7 @@ function AbaChecklist() {
                           </div>
                           <div>
                             <label className="font-mono-label text-[11px] uppercase tracking-wider text-[#6B6357] block mb-2">
-                              Média diária de pacientes internados
+                              Pacientes internados no mês
                             </label>
                             <input
                               type="number"
@@ -1679,7 +1751,7 @@ function AbaChecklist() {
                         {lancheCritico && (
                           <div className="mt-4 border-2 border-[#ED282C] bg-[#ED282C]/5 p-4">
                             <p className="font-mono-label text-[11px] uppercase tracking-wider font-semibold text-[#ED282C] mb-3">
-                              Razão acima de 1,1 — justificativa obrigatória <span className="text-[#ED282C]">*</span>
+                              Razão acima de 3,30 — justificativa obrigatória <span className="text-[#ED282C]">*</span>
                             </p>
                             <textarea
                               value={justificativaLanche}
@@ -1694,10 +1766,20 @@ function AbaChecklist() {
                         {lancheNaoConforme && !lancheCritico && (
                           <div className="mt-3 border border-[#1C1A17]/30 bg-[#F4F7FA] p-3">
                             <p className="font-ui text-sm text-[#6B6357]">
-                              Razão acima de 1,0. Considere registrar uma observação abaixo explicando o contexto da distorção.
+                              Razão entre 3,0 e 3,15 — dentro da tolerância de 5%. Considere registrar uma observação se relevante.
                             </p>
                           </div>
                         )}
+                      </div>
+                    )}
+
+                    {item.metricoAcomp && (
+                      <div className="mt-3 p-3 rounded-lg text-xs font-mono-label space-y-1" style={{ backgroundColor: "#F0F9FF", border: "1px solid #BBDEFB" }}>
+                        <p className="font-semibold mb-1.5" style={{ color: "#0C2856" }}>Legenda — proporção refeições de acompanhante/paciente</p>
+                        <p><span className="inline-block w-2.5 h-2.5 rounded-full mr-1.5" style={{ backgroundColor: "#00952A" }} />≤ 3,15 — Conforme (tolerância 5%)</p>
+                        <p><span className="inline-block w-2.5 h-2.5 rounded-full mr-1.5" style={{ backgroundColor: "#FF6700" }} />3,16 a 3,30 — Não conforme</p>
+                        <p><span className="inline-block w-2.5 h-2.5 rounded-full mr-1.5" style={{ backgroundColor: "#ED282C" }} />&gt; 3,30 — Não conforme + justificativa obrigatória (acima de 10%)</p>
+                        <p className="text-[#6B7A8D] mt-1">Fórmula: total de refeições de acompanhante no mês ÷ total de pacientes internados no mês</p>
                       </div>
                     )}
 
@@ -1706,7 +1788,7 @@ function AbaChecklist() {
                         <div className="flex items-end gap-4 flex-wrap">
                           <div>
                             <label className="font-mono-label text-[11px] uppercase tracking-wider text-[#6B6357] block mb-2">
-                              Média diária de refeições de acompanhante
+                              Refeições de acompanhante no mês
                             </label>
                             <input
                               type="number"
@@ -1721,7 +1803,7 @@ function AbaChecklist() {
                           </div>
                           <div>
                             <label className="font-mono-label text-[11px] uppercase tracking-wider text-[#6B6357] block mb-2">
-                              Média diária de pacientes internados
+                              Pacientes internados no mês
                             </label>
                             <input
                               type="number"
@@ -2046,8 +2128,8 @@ function TabelaProporcoesHospitais() {
 
   function corRazaoLanche(v) {
     if (v === null || v === undefined) return { cor: "#6B6357", bg: "transparent" };
-    if (v <= 1.0) return { cor: "#0068FF", bg: "#1F5A4A18" };
-    if (v <= 1.1) return { cor: "#ED282C", bg: "transparent" };
+    if (v <= 3.15) return { cor: "#00952A", bg: "#00952A18" };
+    if (v <= 3.30) return { cor: "#FF6700", bg: "transparent" };
     return { cor: "#ED282C", bg: "#A13D2B14" };
   }
 
@@ -2134,7 +2216,7 @@ function TabelaProporcoesHospitais() {
       </div>
 
       <div className="border-t border-[#1C1A17]/15 px-6 py-3 font-mono-label text-[10px] text-[#6B6357] flex flex-wrap gap-6">
-        <span>Lanche/paciente: meta <strong className="text-[#1C1A17]">≤ 1,0</strong> · crítico <strong className="text-[#ED282C]">&gt; 1,1</strong></span>
+        <span>Lanche/paciente: meta <strong style={{color:"#00952A"}}>≤ 3,15</strong> · atenção <strong style={{color:"#FF6700"}}>&gt; 3,15</strong> · crítico <strong style={{color:"#ED282C"}}>&gt; 3,30</strong></span>
         <span>Acomp./paciente: meta <strong className="text-[#1C1A17]">≤ 3,0</strong> · crítico <strong className="text-[#ED282C]">&gt; 3,3</strong></span>
       </div>
     </section>
@@ -3420,26 +3502,39 @@ function TelaHomeMedicamentos({ onIrPara, onVoltarProduto }) {
 
 
 // ---------- Monitoramento de Medicamentos: escolha do estoque + inventário + acurácia ----------
-function TelaMonitoramentoMedicamentos({ onVoltar, onIrParaInicio, estoques, setEstoques, historicoPorEstoque, setHistoricoPorEstoque }) {
+function TelaMonitoramentoMedicamentos({ onVoltar, onIrParaInicio, estoques, setEstoques, historicoPorEstoque, setHistoricoPorEstoque, categoriasPorSetor, setCategoriasPorSetor }) {
   const [estoqueId, setEstoqueId] = useState(null);
   const [acaoAtiva, setAcaoAtiva] = useState(null); // null | "inventario" | "acuracia"
   const [showAddSetor, setShowAddSetor] = useState(false);
   const [setorEmEdicao, setSetorEmEdicao] = useState(null);
+  const [setorCategorias, setSetorCategorias] = useState(null);
+
+  function salvarCategorias(setorId, novasCategorias) {
+    setCategoriasPorSetor((prev) => ({ ...prev, [setorId]: novasCategorias }));
+    setSetorCategorias(null);
+  }
 
   const estoqueAtual = estoques.find((e) => e.id === estoqueId);
 
+  // chaveHistorico: quando há categoria, usa "estoqueId:categoriaId"
+  function chaveHistorico(estoqueId, categoriaId) {
+    return categoriaId ? `${estoqueId}:${categoriaId}` : estoqueId;
+  }
+
   function registrarInventario(estoqueId, registro) {
-    setHistoricoPorEstoque((prev) => ({
-      ...prev,
-      [estoqueId]: { ...prev[estoqueId], inventarios: [registro, ...prev[estoqueId].inventarios] },
-    }));
+    const chave = chaveHistorico(estoqueId, registro.categoriaId);
+    setHistoricoPorEstoque((prev) => {
+      const entrada = prev[chave] || { inventarios: [], verificacoes: [] };
+      return { ...prev, [chave]: { ...entrada, inventarios: [registro, ...entrada.inventarios] } };
+    });
   }
 
   function registrarVerificacao(estoqueId, registro) {
-    setHistoricoPorEstoque((prev) => ({
-      ...prev,
-      [estoqueId]: { ...prev[estoqueId], verificacoes: [registro, ...prev[estoqueId].verificacoes] },
-    }));
+    const chave = chaveHistorico(estoqueId, registro.categoriaId);
+    setHistoricoPorEstoque((prev) => {
+      const entrada = prev[chave] || { inventarios: [], verificacoes: [] };
+      return { ...prev, [chave]: { ...entrada, verificacoes: [registro, ...entrada.verificacoes] } };
+    });
   }
 
   function gerarIdSetor(nome) {
@@ -3535,6 +3630,33 @@ function TelaMonitoramentoMedicamentos({ onVoltar, onIrParaInicio, estoques, set
                     >
                       <Pencil size={15} />
                     </button>
+
+                    <button
+                      onClick={() => setSetorCategorias(e)}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-lg border transition-all hover:shadow-sm"
+                      style={{
+                        backgroundColor: (categoriasPorSetor[e.id] || []).length > 0 ? "#E3F2FD" : "#F4F7FA",
+                        borderColor: (categoriasPorSetor[e.id] || []).length > 0 ? "#0068FF" : "#CBD5E1",
+                        color: (categoriasPorSetor[e.id] || []).length > 0 ? "#0068FF" : "#6B7A8D",
+                      }}
+                      title="Gerenciar categorias deste setor"
+                    >
+                      <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+                        <rect x="1" y="1" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3"/>
+                        <rect x="8" y="1" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3"/>
+                        <rect x="1" y="8" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3"/>
+                        <rect x="8" y="8" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3"/>
+                      </svg>
+                      <span className="font-mono-label text-[11px] font-semibold uppercase tracking-wide">
+                        Categorias
+                      </span>
+                      {(categoriasPorSetor[e.id] || []).length > 0 && (
+                        <span className="font-mono-label text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                          style={{ backgroundColor: "#0068FF", color: "white", minWidth: 18, textAlign: "center" }}>
+                          {(categoriasPorSetor[e.id] || []).length}
+                        </span>
+                      )}
+                    </button>
                   </div>
                 </div>
               );
@@ -3548,6 +3670,13 @@ function TelaMonitoramentoMedicamentos({ onVoltar, onIrParaInicio, estoques, set
             setor={setorEmEdicao}
             onFechar={() => setSetorEmEdicao(null)}
             onSalvar={(nome, responsavel) => editarSetor(setorEmEdicao.id, nome, responsavel)}
+        />)}
+        {setorCategorias && (
+          <ModalCategorias
+            setor={setorCategorias}
+            categorias={categoriasPorSetor[setorCategorias.id] || []}
+            onFechar={() => setSetorCategorias(null)}
+            onSalvar={(cats) => salvarCategorias(setorCategorias.id, cats)}
           />
         )}
       </TelaLayout>
@@ -3563,7 +3692,13 @@ function TelaMonitoramentoMedicamentos({ onVoltar, onIrParaInicio, estoques, set
             <p className="font-mono-label text-[11px] uppercase tracking-wider text-[#6B6357]">{estoqueAtual.nome}</p>
             <h1 className="font-display text-xl font-medium mt-1">Inventário realizado</h1>
           </div>
-          <FormularioInventario estoqueId={estoqueId} historico={historicoPorEstoque[estoqueId].inventarios} onRegistrar={registrarInventario} />
+          <FormularioInventario
+            estoqueId={estoqueId}
+            historico={historicoPorEstoque[estoqueId]?.inventarios || []}
+            categorias={categoriasPorSetor[estoqueId] || []}
+            historicoPorCategoria={historicoPorEstoque}
+            onRegistrar={registrarInventario}
+          />
           <p className="font-mono-label text-[10px] text-[#6B6357] mt-8 text-center">
             Protótipo — dados não são salvos entre sessões.
           </p>
@@ -3581,7 +3716,14 @@ function TelaMonitoramentoMedicamentos({ onVoltar, onIrParaInicio, estoques, set
             <p className="font-mono-label text-[11px] uppercase tracking-wider text-[#6B6357]">{estoqueAtual.nome}</p>
             <h1 className="font-display text-xl font-medium mt-1">Verificação de acurácia</h1>
           </div>
-          <FormularioVerificacaoAcuracia estoqueId={estoqueId} historico={historicoPorEstoque[estoqueId].verificacoes} inventarios={historicoPorEstoque[estoqueId].inventarios} onRegistrar={registrarVerificacao} />
+          <FormularioVerificacaoAcuracia
+            estoqueId={estoqueId}
+            historico={historicoPorEstoque[estoqueId]?.verificacoes || []}
+            inventarios={historicoPorEstoque[estoqueId]?.inventarios || []}
+            categorias={categoriasPorSetor[estoqueId] || []}
+            historicoPorCategoria={historicoPorEstoque}
+            onRegistrar={registrarVerificacao}
+          />
           <p className="font-mono-label text-[10px] text-[#6B6357] mt-8 text-center">
             Protótipo — dados não são salvos entre sessões.
           </p>
@@ -3593,6 +3735,62 @@ function TelaMonitoramentoMedicamentos({ onVoltar, onIrParaInicio, estoques, set
   // Estado inesperado (sem ação ativa, mas com estoque selecionado): retorna à lista por segurança.
   setEstoqueId(null);
   return null;
+}
+
+function ModalCategorias({ setor, categorias, onFechar, onSalvar }) {
+  const [lista, setLista] = useState(
+    categorias.length > 0 ? categorias : [{ nome: "" }]
+  );
+
+  function atualizar(idx, valor) {
+    setLista((prev) => prev.map((c, i) => (i === idx ? { ...c, nome: valor } : c)));
+  }
+  function adicionar() { setLista((prev) => [...prev, { nome: "" }]); }
+  function remover(idx) { setLista((prev) => prev.length > 1 ? prev.filter((_, i) => i !== idx) : [{ nome: "" }]); }
+  function salvar() {
+    const validas = lista.filter((c) => c.nome.trim()).map((c) => ({ nome: c.nome.trim() }));
+    onSalvar(validas);
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: "rgba(12,40,86,0.7)" }} onClick={onFechar}>
+      <div className="bg-white rounded-2xl max-w-md w-full max-h-[80vh] overflow-y-auto border border-[#E2E8F0]" style={{ boxShadow: "0 8px 32px rgba(12,40,86,0.18)" }} onClick={(e) => e.stopPropagation()}>
+        <div className="px-6 py-4 border-b border-[#E2E8F0]">
+          <h3 className="font-display text-base font-bold" style={{ color: "#0C2856" }}>Categorias — {setor.nome}</h3>
+          <p className="font-ui text-xs mt-1" style={{ color: "#6B7A8D" }}>
+            Subdivida o setor em categorias (ex.: Alto Custo, Antibióticos). Cada categoria terá inventários e verificações independentes.
+          </p>
+        </div>
+        <div className="p-6 space-y-3">
+          {lista.map((cat, idx) => (
+            <div key={idx} className="flex items-center gap-2">
+              <input
+                type="text"
+                value={cat.nome}
+                onChange={(e) => atualizar(idx, e.target.value)}
+                placeholder={`Ex.: Alto Custo, Antibióticos...`}
+                className="flex-1 bg-[#F4F7FA] border border-[#CBD5E1] py-2 px-3 rounded-lg font-ui text-sm focus:outline-none focus:border-[#0068FF]"
+              />
+              <button onClick={() => remover(idx)} className="text-[#6B7A8D] hover:text-[#ED282C] transition-colors">
+                <X size={14} />
+              </button>
+            </div>
+          ))}
+          <button onClick={adicionar} className="flex items-center gap-1.5 font-mono-label text-[11px] uppercase tracking-wide text-[#0068FF] hover:opacity-80">
+            <Plus size={12} /> adicionar categoria
+          </button>
+        </div>
+        <div className="border-t border-[#E2E8F0] px-6 py-4 flex justify-end gap-3">
+          <button onClick={onFechar} className="font-ui text-sm px-4 py-2 border border-[#E2E8F0] rounded-lg hover:bg-[#F4F7FA] transition-colors" style={{ color: "#6B7A8D" }}>
+            Cancelar
+          </button>
+          <button onClick={salvar} className="font-ui text-sm font-semibold px-5 py-2 rounded-lg text-white transition-colors hover:opacity-90" style={{ backgroundColor: "#0C2856" }}>
+            Salvar categorias
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function ModalAdicionarSetor({ onFechar, onAdicionar }) {
@@ -3749,17 +3947,25 @@ function ModalEditarSetor({ setor, onFechar, onSalvar }) {
   );
 }
 
-function FormularioInventario({ estoqueId, historico, onRegistrar }) {
+function FormularioInventario({ estoqueId, historico, categorias, historicoPorCategoria, onRegistrar }) {
   const hoje = new Date().toISOString().slice(0, 10);
   const [data, setData] = useState(hoje);
   const [responsavel, setResponsavel] = useState("");
   const [linkRelatorio, setLinkRelatorio] = useState("");
   const [observacoes, setObservacoes] = useState("");
+  const [categoriaId, setCategoriaId] = useState(categorias.length > 0 ? "" : null);
   const [confirmado, setConfirmado] = useState(false);
 
+  const temCategorias = categorias.length > 0;
+  const categoriaValida = !temCategorias || categoriaId !== "";
+
+  // Histórico a exibir: da categoria selecionada (se houver) ou do setor
+  const chave = categoriaId ? `${estoqueId}:${categoriaId}` : estoqueId;
+  const historicoExibido = (historicoPorCategoria?.[chave]?.inventarios) || historico;
+
   function handleRegistrar() {
-    if (!responsavel.trim()) return;
-    onRegistrar(estoqueId, { data, responsavel, linkRelatorio, observacoes });
+    if (!responsavel.trim() || !categoriaValida) return;
+    onRegistrar(estoqueId, { data, responsavel, linkRelatorio, observacoes, categoriaId });
     setLinkRelatorio("");
     setObservacoes("");
     setConfirmado(true);
@@ -3777,6 +3983,27 @@ function FormularioInventario({ estoqueId, historico, onRegistrar }) {
         <p className="font-ui text-xs text-[#6B6357]">
           Registro de execução do inventário periódico. Anexe o relatório do sistema no Google Drive e informe o link abaixo.
         </p>
+
+        {temCategorias && (
+          <div>
+            <label className="font-mono-label text-[11px] uppercase tracking-wider text-[#6B6357] block mb-1.5">
+              Categoria <span className="text-[#ED282C]">*</span>
+            </label>
+            <select
+              value={categoriaId}
+              onChange={(e) => setCategoriaId(e.target.value)}
+              className="w-full bg-white border border-[#CBD5E1] py-2 px-2 font-ui text-sm focus:outline-none focus:border-[#0068FF] rounded-lg"
+            >
+              <option value="">— Selecione a categoria —</option>
+              {categorias.map((cat, i) => (
+                <option key={i} value={cat.nome}>{cat.nome}</option>
+              ))}
+            </select>
+            {categoriaId === "" && (
+              <p className="font-mono-label text-[10px] text-[#ED282C] mt-1">Selecione uma categoria para continuar.</p>
+            )}
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-3">
           <div>
@@ -3835,7 +4062,7 @@ function FormularioInventario({ estoqueId, historico, onRegistrar }) {
         <div className="flex items-center gap-3">
           <button
             onClick={handleRegistrar}
-            disabled={!responsavel.trim()}
+            disabled={!responsavel.trim() || !categoriaValida}
             className={`font-ui text-sm font-medium px-5 py-2.5 border-2 transition-colors rounded-lg
               ${responsavel.trim() ? "border-[#FF6700] bg-[#FF6700] text-white hover:bg-[#A68968]" : "border-[#E2E8F0] text-[#6B6357]/40 cursor-not-allowed"}`}
           >
@@ -3851,11 +4078,11 @@ function FormularioInventario({ estoqueId, historico, onRegistrar }) {
 
       <div className="border-t border-[#E2E8F0] p-4">
         <p className="font-mono-label text-[11px] uppercase tracking-wider text-[#6B6357] mb-2">Histórico recente</p>
-        {historico.length === 0 ? (
-          <p className="font-ui text-xs text-[#6B6357]">Nenhum inventário registrado ainda.</p>
+        {historicoExibido.length === 0 ? (
+          <p className="font-ui text-xs text-[#6B6357]">Nenhum inventário registrado{categoriaId ? ` para ${categoriaId}` : ""} ainda.</p>
         ) : (
           <ul className="space-y-2 max-h-44 overflow-y-auto">
-            {historico.map((h, i) => (
+            {historicoExibido.map((h, i) => (
               <li key={i} className="font-ui text-xs border-b border-[#E2E8F0] pb-2">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-mono-label text-[#0C2856] font-medium">{new Date(h.data).toLocaleDateString("pt-BR")}</span>
@@ -3877,12 +4104,20 @@ function FormularioInventario({ estoqueId, historico, onRegistrar }) {
     </section>
   );
 }
-function FormularioVerificacaoAcuracia({ estoqueId, historico, inventarios, onRegistrar }) {
+function FormularioVerificacaoAcuracia({ estoqueId, historico, inventarios, categorias, historicoPorCategoria, onRegistrar }) {
   const hoje = new Date().toISOString().slice(0, 10);
   const [data, setData] = useState(hoje);
   const [percentual, setPercentual] = useState("");
   const [aplicadoPor, setAplicadoPor] = useState("");
+  const [categoriaId, setCategoriaId] = useState(categorias?.length > 0 ? "" : null);
   const [confirmado, setConfirmado] = useState(false);
+
+  const temCategorias = categorias?.length > 0;
+  const categoriaValida = !temCategorias || categoriaId !== "";
+
+  const chave = categoriaId ? `${estoqueId}:${categoriaId}` : estoqueId;
+  const historicoExibido = (historicoPorCategoria?.[chave]?.verificacoes) || historico;
+  const inventariosExibidos = (historicoPorCategoria?.[chave]?.inventarios) || inventarios;
 
   const percentualNum = percentual === "" ? null : Number(percentual);
   const abaixoMeta = percentualNum !== null && !Number.isNaN(percentualNum) && percentualNum < META_ACURACIA;
@@ -3891,20 +4126,18 @@ function FormularioVerificacaoAcuracia({ estoqueId, historico, inventarios, onRe
   // Calcula quantos dias corridos se passaram entre a data do verificação de acurácia
   // e o último inventário registrado ANTES dessa data neste mesmo setor.
   function diasDesdeUltimoInventario(dataAcuracia) {
-    if (!inventarios || inventarios.length === 0) return null;
+    if (!inventariosExibidos || inventariosExibidos.length === 0) return null;
     const tsAcuracia = new Date(dataAcuracia).getTime();
-    // inventarios armazenados com o mais recente primeiro — filtra só os anteriores ao teste
-    const anteriores = inventarios.filter((inv) => new Date(inv.data).getTime() <= tsAcuracia);
+    const anteriores = inventariosExibidos.filter((inv) => new Date(inv.data).getTime() <= tsAcuracia);
     if (anteriores.length === 0) return null;
-    // o mais recente dentre os anteriores (primeiro da lista, já que está em ordem decrescente)
     const ultimoInv = anteriores[0];
     const diffMs = tsAcuracia - new Date(ultimoInv.data).getTime();
     return Math.round(diffMs / (1000 * 60 * 60 * 24));
   }
 
   function handleRegistrar() {
-    if (!aplicadoPor.trim() || percentualNum === null || Number.isNaN(percentualNum)) return;
-    onRegistrar(estoqueId, { data, percentual: percentualNum, aplicadoPor });
+    if (!aplicadoPor.trim() || percentualNum === null || Number.isNaN(percentualNum) || !categoriaValida) return;
+    onRegistrar(estoqueId, { data, percentual: percentualNum, aplicadoPor, categoriaId });
     setPercentual("");
     setConfirmado(true);
     setTimeout(() => setConfirmado(false), 2000);
@@ -3933,6 +4166,23 @@ function FormularioVerificacaoAcuracia({ estoqueId, historico, inventarios, onRe
             />
           </div>
           <div>
+            {temCategorias && (
+              <div>
+                <label className="font-mono-label text-[11px] uppercase tracking-wider text-[#6B6357] block mb-1.5">
+                  Categoria <span className="text-[#ED282C]">*</span>
+                </label>
+                <select
+                  value={categoriaId}
+                  onChange={(e) => setCategoriaId(e.target.value)}
+                  className="w-full bg-white border border-[#CBD5E1] py-2 px-2 font-ui text-sm focus:outline-none focus:border-[#0068FF] rounded-lg"
+                >
+                  <option value="">— Selecione a categoria —</option>
+                  {categorias.map((cat, i) => (
+                    <option key={i} value={cat.nome}>{cat.nome}</option>
+                  ))}
+                </select>
+              </div>
+            )}
             <label className="font-mono-label text-[11px] uppercase tracking-wider text-[#6B6357] block mb-1.5">Aplicado por</label>
             <select
               value={aplicadoPor}
@@ -3999,11 +4249,11 @@ function FormularioVerificacaoAcuracia({ estoqueId, historico, inventarios, onRe
 
       <div className="border-t border-[#E2E8F0] p-4">
         <p className="font-mono-label text-[11px] uppercase tracking-wider text-[#6B6357] mb-2">Histórico recente</p>
-        {historico.length === 0 ? (
-          <p className="font-ui text-xs text-[#6B6357]">Nenhum verificação de acurácia registrado ainda.</p>
+        {historicoExibido.length === 0 ? (
+          <p className="font-ui text-xs text-[#6B6357]">Nenhuma verificação de acurácia registrada ainda.</p>
         ) : (
           <ul className="space-y-2 max-h-52 overflow-y-auto">
-            {historico.map((h, i) => {
+            {historicoExibido.map((h, i) => {
               const ruim = h.percentual < META_ACURACIA;
               const dias = diasDesdeUltimoInventario(h.data);
               return (
@@ -4039,8 +4289,9 @@ function FormularioVerificacaoAcuracia({ estoqueId, historico, inventarios, onRe
 }
 
 // ---------- Painel de Medicamentos (placeholder inicial) ----------
-function TelaPainelMedicamentos({ onVoltar, onIrParaInicio, estoques, historicoPorEstoque }) {
+function TelaPainelMedicamentos({ onVoltar, onIrParaInicio, estoques, historicoPorEstoque, categoriasPorSetor }) {
   const [gerando, setGerando] = React.useState(false);
+  const [tooltip, setTooltip] = React.useState(null); // { nomeExibido, percentual, cor, pctX, pctY }
 
   function gerarPDFMedicamentos() {
     setGerando(true);
@@ -4076,9 +4327,9 @@ function TelaPainelMedicamentos({ onVoltar, onIrParaInicio, estoques, historicoP
     }
     function periodicidade(media) {
       if (media===null) return "—";
-      if (media>=95) return "Trimestral";
-      if (media>=80) return "Bimestral";
-      return "Mensal";
+      if (media>=95) return "Semestral";
+      if (media>=80) return "Trimestral";
+      return "Bimestral";
     }
 
     const div = document.createElement("div");
@@ -4148,10 +4399,22 @@ ${div.outerHTML}
   }
 
   // Dados: ordem cronológica por setor (mais antigo primeiro)
-  const dadosPorSetor = estoques.map((e) => {
-    const lista = (historicoPorEstoque[e.id]?.verificacoes || []).slice().reverse();
-    const inventarios = (historicoPorEstoque[e.id]?.inventarios || []).slice().reverse();
-    return { estoque: e, verificacoes: lista, inventarios };
+  // Quando setor tem categorias, expande em sub-entradas por categoria
+  const dadosPorSetor = estoques.flatMap((e) => {
+    const cats = categoriasPorSetor?.[e.id] || [];
+    if (cats.length === 0) {
+      // sem categorias: entrada única do setor
+      const lista = (historicoPorEstoque[e.id]?.verificacoes || []).slice().reverse();
+      const invs = (historicoPorEstoque[e.id]?.inventarios || []).slice().reverse();
+      return [{ estoque: e, nomeExibido: e.nome, verificacoes: lista, inventarios: invs, categoria: null }];
+    }
+    // com categorias: uma entrada por categoria
+    return cats.map((cat) => {
+      const chave = `${e.id}:${cat.nome}`;
+      const lista = (historicoPorEstoque[chave]?.verificacoes || []).slice().reverse();
+      const invs = (historicoPorEstoque[chave]?.inventarios || []).slice().reverse();
+      return { estoque: e, nomeExibido: `${e.nome} › ${cat.nome}`, verificacoes: lista, inventarios: invs, categoria: cat.nome };
+    });
   });
 
   const maxVerif = Math.max(0, ...dadosPorSetor.map((d) => d.verificacoes.length));
@@ -4164,6 +4427,21 @@ ${div.outerHTML}
     return Math.round((ult.reduce((s, v) => s + v.percentual, 0) / ult.length) * 10) / 10;
   }
 
+  // Último teste de acurácia
+  function ultimoTeste(verificacoes) {
+    if (!verificacoes.length) return null;
+    return verificacoes[verificacoes.length - 1].percentual;
+  }
+
+  // Iniciais do setor para bolinhas do gráfico
+  function iniciaisSetorLocal(nome) {
+    return nome.split(/\s+/)
+      .filter(w => w.length > 2 && !["da","de","do","das","dos","e","›"].includes(w.toLowerCase()))
+      .slice(0, 3)
+      .map(w => w[0].toUpperCase())
+      .join("");
+  }
+
   function statusSetor(media) {
     if (media === null) return null;
     if (media >= 95) return { label: "META", cor: "#00952A", bg: "#E8F5E9" };
@@ -4173,9 +4451,9 @@ ${div.outerHTML}
 
   function periodicidade(media) {
     if (media === null) return "—";
-    if (media >= 95) return "Trimestral";
-    if (media >= 80) return "Bimestral";
-    return "Mensal";
+    if (media >= 95) return "Semestral";
+    if (media >= 80) return "Trimestral";
+    return "Bimestral";
   }
 
   function ultimoInventarioLabel(inventarios, maxVerif) {
@@ -4237,13 +4515,14 @@ ${div.outerHTML}
 
           <div className="flex flex-col lg:flex-row">
             {/* Gráfico SVG */}
-            <div className="flex-1 p-4 overflow-x-auto">
+            <div className="flex-1 p-4 overflow-x-auto" onClick={() => setTooltip(null)}>
               {maxVerif === 0 ? (
                 <p className="font-ui text-sm text-center py-10" style={{ color: "#6B7A8D" }}>
                   Nenhuma verificação de acurácia registrada ainda.
                 </p>
               ) : (
-                <svg viewBox={`0 0 ${W} ${H}`} className="w-full min-w-[520px]">
+                <div className="relative min-w-[520px]">
+                  <svg viewBox={`0 0 ${W} ${H}`} className="w-full">
                   {/* Faixa META (verde) ≥95% */}
                   <rect x={mg.left} y={yFn(100)} width={iW} height={yFn(95) - yFn(100)} fill="#4AE23D" fillOpacity="0.12"/>
                   <text x={mg.left + 4} y={yFn(100) + 12} fontSize="9" fill="#00952A" fontFamily="monospace" fontWeight="700">META ≥ 95%</text>
@@ -4278,19 +4557,27 @@ ${div.outerHTML}
                     </text>
                   ))}
 
-                  {/* Linhas por setor */}
-                  {dadosPorSetor.map(({ estoque, verificacoes }, si) => {
+                  {/* Bolinhas com iniciais — sem linhas */}
+                  {dadosPorSetor.map(({ estoque, nomeExibido, verificacoes }, si) => {
                     if (!verificacoes.length) return null;
                     const cor = CORES_SETOR[si % CORES_SETOR.length];
-                    const pts = verificacoes.map((v, i) => `${xFn(i)},${yFn(v.percentual)}`).join(" ");
-                    return (
-                      <g key={estoque.id}>
-                        <polyline points={pts} fill="none" stroke={cor} strokeWidth="2" strokeOpacity="0.7"/>
-                        {verificacoes.map((v, i) => (
-                          <circle key={i} cx={xFn(i)} cy={yFn(v.percentual)} r="5" fill={cor} stroke="white" strokeWidth="1.5"/>
-                        ))}
+                    const ini = iniciaisSetorLocal(nomeExibido);
+                    return verificacoes.map((v, i) => (
+                      <g key={`${estoque.id}-${nomeExibido}-${i}`}
+                        style={{ cursor: "pointer" }}
+                        onMouseEnter={(e) => {
+                          const rect = e.currentTarget.closest('svg').getBoundingClientRect();
+                          const cx = parseFloat(e.currentTarget.querySelector('circle').getAttribute('cx'));
+                          const cy = parseFloat(e.currentTarget.querySelector('circle').getAttribute('cy'));
+                          setTooltip({ nomeExibido, percentual: v.percentual, cor, pctX: (cx / W) * 100, pctY: (cy / H) * 100 });
+                        }}
+                        onMouseLeave={() => setTooltip(null)}
+                      >
+                        <circle cx={xFn(i)} cy={yFn(v.percentual)} r="13" fill={cor} stroke="white" strokeWidth="2"/>
+                        <text x={xFn(i)} y={yFn(v.percentual)} textAnchor="middle" dominantBaseline="middle"
+                          fontSize="7.5" fill="white" fontFamily="monospace" fontWeight="700">{ini}</text>
                       </g>
-                    );
+                    ));
                   })}
 
                   {/* Ícones de inventário no eixo X (simplificado) */}
@@ -4298,19 +4585,48 @@ ${div.outerHTML}
                     <text key={i} x={xFn(i)} y={H - mg.bottom + 34} textAnchor="middle" fontSize="13" fill="#00952A">📋</text>
                   ))}
                 </svg>
+
+                {/* Tooltip hover */}
+                {tooltip && (
+                  <div className="absolute z-50 pointer-events-none"
+                    style={{
+                      left: `${Math.min(tooltip.pctX, 68)}%`,
+                      top: `${Math.max(tooltip.pctY - 8, 2)}%`,
+                      transform: tooltip.pctX > 68 ? "translateX(-100%)" : "translateX(10px)",
+                    }}>
+                    <div className="bg-white rounded-xl shadow-xl border border-[#E2E8F0] p-3 min-w-[190px]"
+                      style={{ boxShadow: "0 8px 24px rgba(12,40,86,0.16)" }}>
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: tooltip.cor }}/>
+                        <span className="font-ui text-xs font-semibold leading-tight" style={{ color: "#0C2856" }}>{tooltip.nomeExibido}</span>
+                      </div>
+                      <p className="font-display text-2xl font-bold"
+                        style={{ color: tooltip.percentual >= 95 ? "#00952A" : tooltip.percentual >= 80 ? "#FF6700" : "#ED282C" }}>
+                        {tooltip.percentual}%
+                      </p>
+                      <p className="font-mono-label text-[10px] mt-0.5" style={{ color: "#6B7A8D" }}>
+                        {tooltip.percentual >= 95 ? "✓ Meta atingida" : tooltip.percentual >= 80 ? "⚠ Atenção" : "⊗ Crítico"}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
               )}
 
-              {/* Legenda */}
-              <div className="flex flex-wrap gap-x-4 gap-y-1 px-2 pb-2">
-                {dadosPorSetor.map(({ estoque }, si) => (
-                  <div key={estoque.id} className="flex items-center gap-1.5">
-                    <div className="w-5 h-0.5" style={{ backgroundColor: CORES_SETOR[si % CORES_SETOR.length] }}/>
-                    <span className="font-ui text-xs" style={{ color: "#4A5568" }}>{estoque.nome}</span>
+              {/* Legenda em 2 colunas */}
+              <div className="px-4 pb-4 pt-2">
+                <p className="font-mono-label text-[10px] uppercase tracking-wider mb-2" style={{ color: "#6B7A8D" }}>Legenda — passe o mouse sobre uma bolinha para detalhes</p>
+                <div className="grid grid-cols-2 gap-x-6 gap-y-1.5">
+                  {dadosPorSetor.map(({ estoque, nomeExibido }, si) => (
+                    <div key={`${estoque.id}-${nomeExibido}`} className="flex items-center gap-2">
+                      <div className="w-4 h-4 rounded-full flex-shrink-0" style={{ backgroundColor: CORES_SETOR[si % CORES_SETOR.length] }}/>
+                      <span className="font-ui text-xs truncate" style={{ color: "#4A5568" }}>{nomeExibido}</span>
+                    </div>
+                  ))}
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm flex-shrink-0">📋</span>
+                    <span className="font-ui text-xs" style={{ color: "#00952A" }}>Inventário realizado</span>
                   </div>
-                ))}
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs">📋</span>
-                  <span className="font-ui text-xs" style={{ color: "#00952A" }}>Inventário realizado (ajuste do sistema)</span>
                 </div>
               </div>
             </div>
@@ -4349,9 +4665,9 @@ ${div.outerHTML}
                   </thead>
                   <tbody>
                     {[
-                      { range: "≥ 95%", periodo: "Trimestral", cor: "#00952A", bg: "#E8F5E9" },
-                      { range: "80% a < 95%", periodo: "Bimestral", cor: "#FF6700", bg: "#FFF3E0" },
-                      { range: "< 80%", periodo: "Mensal", cor: "#ED282C", bg: "#FFEBEE" },
+                      { range: "≥ 95%", periodo: "Semestral", cor: "#00952A", bg: "#E8F5E9" },
+                      { range: "80% a < 95%", periodo: "Trimestral", cor: "#FF6700", bg: "#FFF3E0" },
+                      { range: "< 80%", periodo: "Bimestral", cor: "#ED282C", bg: "#FFEBEE" },
                     ].map(({ range, periodo, cor, bg }) => (
                       <tr key={range} style={{ backgroundColor: bg }}>
                         <td className="px-2 py-1.5 font-medium" style={{ color: cor }}>{range}</td>
@@ -4361,7 +4677,7 @@ ${div.outerHTML}
                   </tbody>
                 </table>
                 <p className="font-ui text-[10px] mt-2" style={{ color: "#6B7A8D" }}>
-                  ⓘ A sugestão considera a média dos últimos 3 testes e a regularidade dos inventários realizados.
+                  ⓘ A sugestão de periodicidade é baseada no resultado do último teste de verificação de acurácia.
                 </p>
               </div>
             </div>
@@ -4378,39 +4694,41 @@ ${div.outerHTML}
             <table className="w-full text-sm font-ui min-w-[640px]">
               <thead>
                 <tr style={{ backgroundColor: "#F4F7FA" }}>
-                  {["Setor","Média acurácia (últimos 3)","Status","Último inventário","Periodicidade sugerida"].map(h => (
+                  {["Setor","Último teste","Status","Último inventário","Periodicidade sugerida"].map(h => (
                     <th key={h} className="text-left px-4 py-3 font-mono-label text-[11px] uppercase tracking-wide" style={{ color: "#6B7A8D" }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {dadosPorSetor.map(({ estoque, verificacoes, inventarios }, si) => {
+                {dadosPorSetor.map(({ estoque, nomeExibido, verificacoes, inventarios }, si) => {
                   const media = mediaUltimos3(verificacoes);
+                  const ultimo = ultimoTeste(verificacoes);
                   const st = statusSetor(media);
+                  const stUltimo = statusSetor(ultimo);
                   const cor = CORES_SETOR[si % CORES_SETOR.length];
                   return (
                     <tr key={estoque.id} className="border-b border-[#E2E8F0]">
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
                           <div className="w-3 h-3 rounded-full" style={{ backgroundColor: cor }}/>
-                          <span className="font-medium text-sm" style={{ color: "#1C1A17" }}>{estoque.nome}</span>
+                          <span className="font-medium text-sm" style={{ color: "#1C1A17" }}>{nomeExibido}</span>
                         </div>
                       </td>
-                      <td className="px-4 py-3 font-mono-label text-sm font-semibold" style={{ color: st?.cor || "#6B7A8D" }}>
-                        {media !== null ? `${media}%` : "—"}
+                      <td className="px-4 py-3 font-mono-label text-sm font-semibold" style={{ color: stUltimo?.cor || "#6B7A8D" }}>
+                        {ultimo !== null ? `${ultimo}%` : "—"}
                       </td>
                       <td className="px-4 py-3">
-                        {st && (
-                          <span className="font-mono-label text-[11px] font-bold px-2 py-1 rounded-full" style={{ backgroundColor: st.bg, color: st.cor }}>
-                            {st.label}
+                        {stUltimo && (
+                          <span className="font-mono-label text-[11px] font-bold px-2 py-1 rounded-full" style={{ backgroundColor: stUltimo.bg, color: stUltimo.cor }}>
+                            {stUltimo.label}
                           </span>
                         )}
                       </td>
                       <td className="px-4 py-3 font-ui text-xs" style={{ color: "#4A5568" }}>
                         {inventarios.length ? `${inventarios.length}º inventário` : "—"}
                       </td>
-                      <td className="px-4 py-3 font-ui text-xs font-semibold" style={{ color: st?.cor || "#6B7A8D" }}>
-                        {media !== null ? periodicidade(media) : "—"}
+                      <td className="px-4 py-3 font-ui text-xs font-semibold" style={{ color: stUltimo?.cor || "#6B7A8D" }}>
+                        {ultimo !== null ? periodicidade(ultimo) : "—"}
                       </td>
                     </tr>
                   );
@@ -4428,7 +4746,7 @@ ${div.outerHTML}
           </div>
           <div className="grid sm:grid-cols-2 gap-3">
             {[
-              "Analise a média de acurácia dos últimos 3 testes.",
+              "Analise o resultado do último teste de verificação de acurácia.",
               "Verifique a tendência: crescente indica melhoria; decrescente requer atenção redobrada.",
               "Considere o tempo desde o último inventário e a criticidade do setor.",
               "Defina a periodicidade conforme o critério e monitore continuamente.",
@@ -4453,31 +4771,24 @@ ${div.outerHTML}
             <h2 className="font-display text-base font-bold" style={{ color: "#0C2856" }}>Inventários realizados por setor</h2>
           </div>
           <div className="p-6 space-y-4">
-            {estoques
-              .map((e) => {
-                const invs = (historicoPorEstoque[e.id]?.inventarios || []).slice().sort((a, b) => new Date(a.data) - new Date(b.data));
+            {dadosPorSetor
+              .map((d, si) => {
+                const invs = d.inventarios.slice().sort((a, b) => new Date(a.data) - new Date(b.data));
                 const qtd = invs.length;
-                // Período de referência: 7 meses = ~210 dias (período do histórico mock)
-                // Média = período ÷ quantidade → proporcional entre setores
                 const PERIODO_REFERENCIA_DIAS = 7 * 30;
                 let mediaDias = qtd > 0 ? Math.round(PERIODO_REFERENCIA_DIAS / qtd) : null;
-                // Periodicidade sugerida baseada na acurácia média
-                const verificacoes = (historicoPorEstoque[e.id]?.verificacoes || []);
-                const ult3 = verificacoes.slice(-3);
-                const media = ult3.length ? Math.round(ult3.reduce((s,v) => s+v.percentual, 0) / ult3.length * 10) / 10 : null;
-                const periodoSugerido = media === null ? null : media >= 95 ? { label: "Trimestral", dias: 90 } : media >= 80 ? { label: "Bimestral", dias: 60 } : { label: "Mensal", dias: 30 };
+                const ult3 = d.verificacoes.slice(-3);
+                const mediaAcur = ult3.length ? Math.round(ult3.reduce((s,v)=>s+v.percentual,0)/ult3.length*10)/10 : null;
+                const periodoSugerido = mediaAcur === null ? null : mediaAcur >= 95 ? { label: "Semestral", dias: 180 } : mediaAcur >= 80 ? { label: "Trimestral", dias: 90 } : { label: "Bimestral", dias: 60 };
                 const corPeriodo = periodoSugerido && mediaDias !== null
                   ? mediaDias <= periodoSugerido.dias * 1.1 ? "#00952A" : "#ED282C"
                   : "#6B7A8D";
-                return { estoque: e, qtd, mediaDias, periodoSugerido, corPeriodo };
+                return { ...d, qtd, mediaDias, periodoSugerido, corPeriodo, si };
               })
               .sort((a, b) => b.qtd - a.qtd)
-              .map(({ estoque: e, qtd, mediaDias, periodoSugerido, corPeriodo }, si) => (
-                <div key={e.id} className="flex items-start gap-4 flex-wrap pb-3 border-b border-[#E2E8F0] last:border-0 last:pb-0">
-                  {/* Nome */}
-                  <span className="font-ui text-sm font-medium min-w-[200px]" style={{ color: "#0C2856" }}>{e.nome}</span>
-
-                  {/* Quadradinhos */}
+              .map(({ estoque, nomeExibido, qtd, mediaDias, periodoSugerido, corPeriodo, si }) => (
+                <div key={`${estoque.id}-${nomeExibido}`} className="flex items-start gap-4 flex-wrap pb-3 border-b border-[#E2E8F0] last:border-0 last:pb-0">
+                  <span className="font-ui text-sm font-medium min-w-[200px]" style={{ color: "#0C2856" }}>{nomeExibido}</span>
                   <div className="flex items-center gap-1 flex-wrap flex-1">
                     {qtd === 0 ? (
                       <span className="font-mono-label text-xs" style={{ color: "#6B7A8D" }}>Nenhum inventário ainda</span>
@@ -4488,8 +4799,6 @@ ${div.outerHTML}
                     )}
                     {qtd > 0 && <span className="font-mono-label text-[11px] ml-1" style={{ color: "#6B7A8D" }}>{qtd} inv.</span>}
                   </div>
-
-                  {/* Média em dias + periodicidade */}
                   {qtd > 0 && (
                     <div className="flex items-center gap-3 flex-wrap">
                       <div className="text-right">
@@ -4500,7 +4809,7 @@ ${div.outerHTML}
                       </div>
                       {periodoSugerido && (
                         <>
-                          <div className="text-[#CBD5E1]">→</div>
+                          <div style={{ color: "#CBD5E1" }}>→</div>
                           <div className="text-right">
                             <p className="font-mono-label text-[10px] uppercase tracking-wide" style={{ color: "#6B7A8D" }}>Sugestão</p>
                             <p className="font-mono-label text-sm font-semibold" style={{ color: corPeriodo }}>
@@ -4520,31 +4829,168 @@ ${div.outerHTML}
   );
 }
 
-export default function App() {
-  const [tela, setTela] = useState("selecaoProduto");
+function TelaIdentificacao({ onEntrar }) {
+  const [nome, setNome] = useState("");
+  const [hospitalSigla, setHospitalSigla] = useState("");
+  const podeContinuar = nome !== "" && hospitalSigla !== "";
 
-  // Estado de Medicamentos compartilhado entre Monitoramento e Painel,
-  // para que o painel possa exibir o histórico registrado no monitoramento.
-  const [estoquesMedicamentos, setEstoquesMedicamentos] = useState(() => ESTOQUES_MEDICAMENTOS.map((e) => ({ ...e })));
-  const [historicoMedicamentos, setHistoricoMedicamentos] = useState(() => {
-    // Clone profundo do mock para que cada sessão tenha seu próprio estado editável.
-    return JSON.parse(JSON.stringify(HISTORICO_MEDICAMENTOS_MOCK));
-  });
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center relative overflow-hidden"
+      style={{ backgroundColor: "#F8FAFD", fontFamily: "'Fraunces', Georgia, serif" }}>
+      <FontesGlobais />
+
+      {/* Blob decorativo */}
+      <div className="absolute top-0 left-0 pointer-events-none" style={{ zIndex: 0, width: 260, height: 320 }}>
+        <svg viewBox="0 0 260 320" fill="none" style={{ width: "100%", height: "100%" }}>
+          <path d="M0 0 C70 0 140 35 150 105 C170 200 100 280 30 305 C10 312 0 320 0 320 Z" fill="url(#idbg)"/>
+          <defs>
+            <linearGradient id="idbg" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor="#0C2856"/>
+              <stop offset="60%" stopColor="#0068FF"/>
+              <stop offset="100%" stopColor="#3AE8C6"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+
+      {/* Ondas rodapé */}
+      <div className="absolute bottom-0 left-0 right-0 pointer-events-none" style={{ zIndex: 0, height: 48 }}>
+        <svg viewBox="0 0 1200 48" fill="none" style={{ width: "100%", height: "100%" }} preserveAspectRatio="none">
+          <path d="M0 24 Q300 6 600 24 T1200 24" stroke="#0068FF" strokeWidth="1.5" fill="none" opacity="0.25"/>
+          <path d="M0 36 Q300 18 600 36 T1200 36" stroke="#4AE23D" strokeWidth="1.5" fill="none" opacity="0.25"/>
+        </svg>
+      </div>
+
+      <div className="relative z-10 w-full max-w-sm px-6">
+        {/* Logos */}
+        <div className="flex items-center justify-center gap-5 mb-8">
+          <img src={LOGO_PE_BASE64} alt="Governo de Pernambuco" style={{ height: 52 }} />
+          <div className="w-px self-stretch" style={{ backgroundColor: "#CBD5E1" }} />
+          <img src={LOGO_SCI_BASE64} alt="SCI" style={{ height: 44 }} />
+        </div>
+
+        <div className="bg-white rounded-2xl border border-[#E2E8F0] p-8"
+          style={{ boxShadow: "0 8px 32px rgba(12,40,86,0.10)" }}>
+          <h1 className="font-display text-xl font-bold mb-1" style={{ color: "#0C2856" }}>
+            Bem-vindo ao SCI
+          </h1>
+          <p className="font-ui text-sm mb-6" style={{ color: "#6B7A8D" }}>
+            Identifique-se para começar o monitoramento.
+          </p>
+
+          {/* Nome */}
+          <div className="mb-4">
+            <label className="font-mono-label text-[11px] uppercase tracking-wider block mb-1.5" style={{ color: "#6B7A8D" }}>
+              Seu nome
+            </label>
+            <select
+              value={nome}
+              onChange={(e) => setNome(e.target.value)}
+              className="w-full bg-[#F4F7FA] border border-[#CBD5E1] rounded-lg py-2.5 px-3 font-ui text-sm focus:outline-none focus:border-[#0068FF]"
+            >
+              <option value="">— Selecione seu nome —</option>
+              {SERVIDORES_UCI.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Hospital/UCI */}
+          <div className="mb-6">
+            <label className="font-mono-label text-[11px] uppercase tracking-wider block mb-1.5" style={{ color: "#6B7A8D" }}>
+              Unidade hospitalar
+            </label>
+            <select
+              value={hospitalSigla}
+              onChange={(e) => setHospitalSigla(e.target.value)}
+              className="w-full bg-[#F4F7FA] border border-[#CBD5E1] rounded-lg py-2.5 px-3 font-ui text-sm focus:outline-none focus:border-[#0068FF]"
+            >
+              <option value="">— Selecione a unidade —</option>
+              {HOSPITAIS.map((h) => (
+                <option key={h.sigla} value={h.sigla}>{h.sigla} — {h.nome}</option>
+              ))}
+            </select>
+          </div>
+
+          <button
+            onClick={() => podeContinuar && onEntrar({ nome, hospitalSigla })}
+            disabled={!podeContinuar}
+            className="w-full py-3 rounded-xl font-ui text-sm font-semibold transition-all"
+            style={{
+              backgroundColor: podeContinuar ? "#0C2856" : "#E2E8F0",
+              color: podeContinuar ? "white" : "#9CA3AF",
+              cursor: podeContinuar ? "pointer" : "not-allowed",
+            }}
+          >
+            Entrar no sistema
+          </button>
+        </div>
+
+        <p className="font-mono-label text-[10px] text-center mt-4" style={{ color: "#9CA3AF" }}>
+          Controladoria-Geral do Estado de Pernambuco · UCI-SES-PE
+        </p>
+      </div>
+    </div>
+  );
+}
+
+export default function App() {
+  const [tela, setTela] = useState("identificacao");
+  const [sessao, setSessao] = useState(null); // { nome, hospitalSigla }
+
+  // Estado de Medicamentos compartilhado entre Monitoramento e Painel
+  const [estoquesMedicamentos] = useState(() => ESTOQUES_MEDICAMENTOS.map((e) => ({ ...e })));
+
+  // Histórico e categorias separados por hospital: { [hospitalSigla]: { [estoqueId|chave]: dados } }
+  const [historicoMedicamentos, setHistoricoMedicamentos] = useState({});
+  const [categoriasMedicamentos, setCategoriasMedicamentos] = useState({});
+
+  // Retorna histórico do hospital atual da sessão (inicializa vazio se não existir)
+  function getHistoricoHospital(sigla) {
+    if (historicoMedicamentos[sigla]) return historicoMedicamentos[sigla];
+    // Primeira vez: inicializa vazio por setor
+    const init = {};
+    ESTOQUES_MEDICAMENTOS.forEach(e => { init[e.id] = { inventarios: [], verificacoes: [] }; });
+    return init;
+  }
+  function setHistoricoHospital(sigla, updater) {
+    setHistoricoMedicamentos(prev => ({
+      ...prev,
+      [sigla]: typeof updater === 'function' ? updater(prev[sigla] || {}) : updater
+    }));
+  }
+  function getCategoriasHospital(sigla) {
+    return categoriasMedicamentos[sigla] || JSON.parse(JSON.stringify(CATEGORIAS_MEDICAMENTOS_MOCK));
+  }
+  function setCategoriasHospital(sigla, updater) {
+    setCategoriasMedicamentos(prev => ({
+      ...prev,
+      [sigla]: typeof updater === 'function' ? updater(prev[sigla] || JSON.parse(JSON.stringify(CATEGORIAS_MEDICAMENTOS_MOCK))) : updater
+    }));
+  }
 
   const irParaInicio = () => setTela("selecaoProduto");
 
-  if (tela === "monitoramento") return <TelaMonitoramento onVoltar={() => setTela("alimentacao")} onIrParaInicio={irParaInicio} />;
-  if (tela === "painel") return <TelaPainel onVoltar={() => setTela("alimentacao")} onIrParaInicio={irParaInicio} />;
-  if (tela === "alimentacao") return <TelaHome onIrPara={setTela} onVoltarProduto={() => setTela("selecaoProduto")} />;
+  // Tela de identificação — obrigatória antes de qualquer outra
+  if (tela === "identificacao" || !sessao) {
+    return <TelaIdentificacao onEntrar={(s) => { setSessao(s); setTela("selecaoProduto"); }} />;
+  }
+
+  if (tela === "monitoramento") return <TelaMonitoramento onVoltar={() => setTela("alimentacao")} onIrParaInicio={irParaInicio} sessao={sessao} />;
+  if (tela === "painel") return <TelaPainel onVoltar={() => setTela("alimentacao")} onIrParaInicio={irParaInicio} sessao={sessao} />;
+  if (tela === "alimentacao") return <TelaHome onIrPara={setTela} onVoltarProduto={() => setTela("selecaoProduto")} sessao={sessao} />;
   if (tela === "monitoramentoMedicamentos") {
     return (
       <TelaMonitoramentoMedicamentos
         onVoltar={() => setTela("medicamentos")}
         onIrParaInicio={irParaInicio}
+        sessao={sessao}
         estoques={estoquesMedicamentos}
         setEstoques={setEstoquesMedicamentos}
-        historicoPorEstoque={historicoMedicamentos}
-        setHistoricoPorEstoque={setHistoricoMedicamentos}
+        historicoPorEstoque={getHistoricoHospital(sessao.hospitalSigla)}
+        setHistoricoPorEstoque={(upd) => setHistoricoHospital(sessao.hospitalSigla, upd)}
+        categoriasPorSetor={getCategoriasHospital(sessao.hospitalSigla)}
+        setCategoriasPorSetor={(upd) => setCategoriasHospital(sessao.hospitalSigla, upd)}
       />
     );
   }
@@ -4553,8 +4999,10 @@ export default function App() {
       <TelaPainelMedicamentos
         onVoltar={() => setTela("medicamentos")}
         onIrParaInicio={irParaInicio}
+        sessao={sessao}
         estoques={estoquesMedicamentos}
-        historicoPorEstoque={historicoMedicamentos}
+        categoriasPorSetor={JSON.parse(JSON.stringify(CATEGORIAS_MEDICAMENTOS_MOCK))}
+        historicoPorEstoque={HISTORICO_MEDICAMENTOS_MOCK}
       />
     );
   }
