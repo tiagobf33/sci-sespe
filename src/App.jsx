@@ -16,6 +16,7 @@ const HOSPITAIS = [
   { sigla: "HBL", nome: "Hospital Barão de Lucena",        cor: "#3AE8C6", responsavel: "Vera Lúcia" },
   { sigla: "HAM", nome: "Hospital Agamenon Magalhães",     cor: "#4AE23D", responsavel: "Sandro Mendonça" },
   { sigla: "HOF", nome: "Hospital Otávio de Freitas",      cor: "#FFCE00", responsavel: "Silvana Melo" },
+  { sigla: "CGE",  nome: "Controladoria-Geral do Estado",    cor: "#0C2856", responsavel: "Administrador" },
 ];
 
 // Mapa rápido: sigla → responsável e responsável → sigla
@@ -143,6 +144,7 @@ const CATEGORIAS_PUBLICO = [
 
 
 const SERVIDORES_UCI = [
+  "Administrador",
   "José Henrique",
   "Johnson Rodrigues",
   "Silvana Melo",
@@ -150,6 +152,21 @@ const SERVIDORES_UCI = [
   "Sandro Mendonça",
   "Bruno Batista",
 ];
+
+const ADMIN_NOME = "Administrador";
+const ADMIN_UNIDADE = "Controladoria-Geral do Estado";
+
+// Verifica se a sessão é do administrador
+function isAdmin(sessao) {
+  return sessao?.nome === ADMIN_NOME;
+}
+
+
+// Pesos padrão dos pontos de controle (podem ser alterados pelo Administrador)
+// Chave = item.art, valor = peso numérico (padrão 1.0 para todos)
+const PESOS_ARTIGOS_DEFAULT = Object.fromEntries(
+  ARTIGOS.map(item => [item.art, 1.0])
+);
 
 // ---------- Domínio: Medicamentos ----------
 
@@ -386,17 +403,18 @@ function gerarHistorico(numMeses = 7) {
 
 const HISTORICO_MOCK = gerarHistorico(7);
 
-function calcularICA(statusItens) {
-  let conforme = 0;
-  let naoConforme = 0;
-  Object.values(statusItens).forEach((s) => {
-    if (s === STATUS.CONFORME) conforme++;
-    else if (s === STATUS.NAO_CONFORME) naoConforme++;
-    // N/A não entra no numerador nem no denominador
+function calcularICA(statusItens, pesos = null) {
+  let conformePeso = 0;
+  let totalPeso = 0;
+  Object.entries(statusItens).forEach(([art, s]) => {
+    if (s === STATUS.CONFORME || s === STATUS.NAO_CONFORME) {
+      const peso = pesos?.[art] ?? 1;
+      if (s === STATUS.CONFORME) conformePeso += peso;
+      totalPeso += peso;
+    }
   });
-  const denominador = conforme + naoConforme;
-  if (denominador === 0) return null;
-  return Math.round((conforme / denominador) * 1000) / 10;
+  if (totalPeso === 0) return null;
+  return Math.round((conformePeso / totalPeso) * 1000) / 10;
 }
 
 // Série do ICA derivada do mesmo histórico de checklist usado no gráfico de biometria.
@@ -720,7 +738,7 @@ function GraficoSerieHistorica({
   );
 }
 
-function TelaSelecaoProduto({ onIrPara }) {
+function TelaSelecaoProduto({ onIrPara, sessao, onTrocarSessao }) {
   return (
     <div className="min-h-screen flex flex-col relative overflow-hidden"
       style={{ backgroundColor: "#F8FAFD", fontFamily: "'Fraunces', Georgia, serif" }}>
@@ -807,10 +825,23 @@ function TelaSelecaoProduto({ onIrPara }) {
       <div className="relative flex flex-col flex-1" style={{ zIndex: 1 }}>
         {/* Header logos */}
         <header className="pt-7 pb-2 px-8">
-          <div className="max-w-5xl mx-auto flex items-center justify-center gap-7">
-            <img src={LOGO_PE_BASE64} alt="Governo de Pernambuco" style={{ height: 62 }} />
-            <div className="w-px self-stretch" style={{ backgroundColor: "#CBD5E1" }} />
-            <img src={LOGO_SCI_BASE64} alt="SCI — Sistema de Controle Interno" style={{ height: 54 }} />
+          <div className="max-w-5xl mx-auto flex items-center justify-between">
+            <div className="flex items-center gap-5 mx-auto">
+              <img src={LOGO_PE_BASE64} alt="Governo de Pernambuco" style={{ height: 56 }} />
+              <div className="w-px self-stretch" style={{ backgroundColor: "#CBD5E1" }} />
+              <img src={LOGO_SCI_BASE64} alt="SCI — Sistema de Controle Interno" style={{ height: 48 }} />
+              {sessao && onTrocarSessao && (
+                <>
+                  <div className="w-px self-stretch" style={{ backgroundColor: "#CBD5E1" }} />
+                  <button onClick={onTrocarSessao}
+                    className="flex flex-col items-start hover:opacity-70 transition-opacity"
+                    title="Trocar identificação">
+                    <span className="font-ui text-xs font-semibold leading-tight" style={{ color: "#0C2856" }}>{sessao.nome}</span>
+                    <span className="font-mono-label text-[10px]" style={{ color: "#0068FF" }}>{sessao.hospitalSigla} · trocar →</span>
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         </header>
 
@@ -955,7 +986,45 @@ function TelaSelecaoProduto({ onIrPara }) {
   );
 }
 
-function HomeTela({ titulo, subtitulo, acoes, onVoltar }) {
+function ChipSessao({ sessao, onTrocar }) {
+  const [open, setOpen] = React.useState(false);
+  return (
+    <div className="relative">
+      <button onClick={() => setOpen(v => !v)}
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all hover:opacity-90"
+        style={{ backgroundColor: "rgba(255,255,255,0.12)", color: "white", border: "1px solid rgba(255,255,255,0.2)" }}>
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+          <circle cx="8" cy="6" r="3" stroke="white" strokeWidth="1.4"/>
+          <path d="M2 14c0-3 2.7-5 6-5s6 2 6 5" stroke="white" strokeWidth="1.4" strokeLinecap="round"/>
+        </svg>
+        <span className="font-mono-label text-[10px] uppercase tracking-wide">{sessao.nome.split(" ")[0]} · {sessao.hospitalSigla}</span>
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+          <path d="M2 3.5L5 6.5L8 3.5" stroke="white" strokeWidth="1.4" strokeLinecap="round"/>
+        </svg>
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full mt-1 z-50 bg-white rounded-xl border border-[#E2E8F0] overflow-hidden"
+          style={{ minWidth: 210, boxShadow: "0 8px 24px rgba(12,40,86,0.15)" }}>
+          <div className="px-4 py-3 border-b border-[#E2E8F0]">
+            <p className="font-ui text-xs font-semibold" style={{ color: "#0C2856" }}>{sessao.nome}</p>
+            <p className="font-mono-label text-[10px]" style={{ color: "#6B7A8D" }}>
+              {HOSPITAIS.find(h => h.sigla === sessao.hospitalSigla)?.nome || sessao.hospitalSigla}
+            </p>
+          </div>
+          <button onClick={() => { setOpen(false); onTrocar(); }}
+            className="w-full flex items-center gap-2 px-4 py-2.5 hover:bg-[#F4F7FA] transition-colors text-left">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+              <path d="M1 8h10M8 4l4 4-4 4" stroke="#0068FF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            <span className="font-ui text-sm" style={{ color: "#0068FF" }}>Trocar identificação</span>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function HomeTela({ titulo, subtitulo, acoes, onVoltar, sessao, onTrocarSessao }) {
   return (
     <div className="min-h-screen flex flex-col relative overflow-hidden"
       style={{ backgroundColor: "#F8FAFD", fontFamily: "'Fraunces', Georgia, serif" }}>
@@ -1063,12 +1132,14 @@ function HomeTela({ titulo, subtitulo, acoes, onVoltar }) {
 }
 
 
-function TelaHome({ onIrPara, onVoltarProduto }) {
+function TelaHome({ onIrPara, onVoltarProduto, sessao, onTrocarSessao }) {
   return (
     <HomeTela
       titulo="Alimentação Hospitalar"
       subtitulo="Alimentação hospitalar"
       onVoltar={onVoltarProduto}
+      sessao={sessao}
+      onTrocarSessao={onTrocarSessao}
       acoes={[
         { label: "Realizar monitoramento", descricao: "Aplicar o checklist mensal e inserir dados de consumo de alimentação por hospital.", icone: ClipboardList, onClick: () => onIrPara("monitoramento") },
         { label: "Visualizar painel", descricao: "Série histórica de biometria, ICA, indicadores de proporção e economia por hospital.", icone: BarChart3, onClick: () => onIrPara("painel") },
@@ -1129,7 +1200,7 @@ function FontesGlobais() {
   );
 }
 
-function BarraTopo({ titulo, onVoltar, produto = "Alimentação Hospitalar", onIrParaInicio, sessao }) {
+function BarraTopo({ titulo, onVoltar, produto = "Alimentação Hospitalar", onIrParaInicio, sessao, onTrocarSessao }) {
   return (
     <>
       <header style={{ backgroundColor: "#0C2856" }}>
@@ -1147,21 +1218,22 @@ function BarraTopo({ titulo, onVoltar, produto = "Alimentação Hospitalar", onI
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             {onIrParaInicio && (
-              <button
-                onClick={onIrParaInicio}
+              <button onClick={onIrParaInicio}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all hover:opacity-90"
-                style={{ backgroundColor: "rgba(255,255,255,0.12)", color: "white", border: "1px solid rgba(255,255,255,0.2)" }}
-              >
+                style={{ backgroundColor: "rgba(255,255,255,0.12)", color: "white", border: "1px solid rgba(255,255,255,0.2)" }}>
                 <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
                   <path d="M2 6.5L8 2l6 4.5V14a1 1 0 01-1 1H3a1 1 0 01-1-1V6.5z" stroke="white" strokeWidth="1.5" strokeLinejoin="round"/>
                   <path d="M6 15V9h4v6" stroke="white" strokeWidth="1.5" strokeLinejoin="round"/>
                 </svg>
-                <span className="font-mono-label text-[10px] uppercase tracking-wide">Tela inicial</span>
+                <span className="font-mono-label text-[10px] uppercase tracking-wide">Início</span>
               </button>
             )}
-            <img src={LOGO_SCI_BASE64} alt="SCI — Sistema de Controle Interno" style={{ height: 32 }} className="flex-shrink-0" />
+
+            {sessao && onTrocarSessao && <ChipSessao sessao={sessao} onTrocar={onTrocarSessao} />}
+
+            <img src={LOGO_SCI_BASE64} alt="SCI" style={{ height: 32 }} className="flex-shrink-0" />
           </div>
         </div>
         <div className="flex h-1">
@@ -1218,13 +1290,13 @@ function TelaLayout({ children }) {
 
 
 // ---------- Tela: Monitoramento (formulário) ----------
-function TelaMonitoramento({ onVoltar, onIrParaInicio, sessao }) {
+function TelaMonitoramento({ onVoltar, onIrParaInicio, sessao, onTrocarSessao, pesosArtigos, setPesosArtigos }) {
   const [aba, setAba] = useState(null); // null | "checklist" | "consumo"
 
   if (aba === null) {
     return (
       <TelaLayout>
-      <BarraTopo titulo="Realizar monitoramento" onVoltar={onVoltar} onIrParaInicio={onIrParaInicio} />
+      <BarraTopo titulo="Realizar monitoramento" onVoltar={onVoltar} onIrParaInicio={onIrParaInicio} sessao={sessao} onTrocarSessao={onTrocarSessao} />
 
         <main className="max-w-3xl mx-auto px-6 py-10">
           <p className="font-mono-label text-[11px] uppercase tracking-[0.18em] text-[#6B7A8D] mb-2">O que você deseja fazer?</p>
@@ -1268,7 +1340,7 @@ function TelaMonitoramento({ onVoltar, onIrParaInicio, sessao }) {
 
   return (
     <TelaLayout>
-      <BarraTopo titulo="Realizar monitoramento" onVoltar={() => setAba(null)} onIrParaInicio={onIrParaInicio} />
+      <BarraTopo titulo="Realizar monitoramento" onVoltar={() => setAba(null)} onIrParaInicio={onIrParaInicio} sessao={sessao} onTrocarSessao={onTrocarSessao} />
 
       <div className="max-w-6xl mx-auto px-6 pt-6">
         <p className="font-mono-label text-[11px] uppercase tracking-wider text-[#6B6357]">
@@ -1276,17 +1348,19 @@ function TelaMonitoramento({ onVoltar, onIrParaInicio, sessao }) {
         </p>
       </div>
 
-      {aba === "checklist" ? <AbaChecklist sessao={sessao} /> : <AbaInserirConsumo sessao={sessao} />}
+      {aba === "checklist" ? <AbaChecklist sessao={sessao} pesosArtigos={pesosArtigos} setPesosArtigos={setPesosArtigos} /> : <AbaInserirConsumo sessao={sessao} />}
     </TelaLayout>
   );
 }
 
-function AbaChecklist({ sessao }) {
+function AbaChecklist({ sessao, pesosArtigos, setPesosArtigos }) {
   const now = new Date();
   const [hospital, setHospital] = useState(sessao?.hospitalSigla || HOSPITAIS[0].sigla);
   const [mesRef, setMesRef] = useState(now.getMonth());
   const [anoRef, setAnoRef] = useState(now.getFullYear());
   const [responsavel, setResponsavel] = useState(sessao?.nome || RESPONSAVEL_POR_HOSPITAL[sessao?.hospitalSigla || HOSPITAIS[0].sigla] || "");
+  const [showPesos, setShowPesos] = useState(false);
+  const [rascunhoPesos, setRascunhoPesos] = useState({});
 
   // Sincronização automática hospital ↔ responsável
   function handleHospitalChange(sigla) {
@@ -1429,11 +1503,92 @@ function AbaChecklist({ sessao }) {
 
   return (
     <>
+    {/* Modal de pesos — só para Administrador */}
+    {showPesos && isAdmin(sessao) && (
+      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+        style={{ backgroundColor: "rgba(12,40,86,0.7)" }}
+        onClick={() => setShowPesos(false)}>
+        <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg border border-[#E2E8F0] flex flex-col"
+          style={{ maxHeight: "85vh", boxShadow: "0 8px 32px rgba(12,40,86,0.2)" }}
+          onClick={e => e.stopPropagation()}>
+          {/* Header fixo */}
+          <div className="px-5 py-4 border-b border-[#E2E8F0] flex items-center justify-between flex-shrink-0">
+            <div>
+              <h3 className="font-display text-base font-bold" style={{ color: "#0C2856" }}>Pesos dos pontos de controle</h3>
+              <p className="font-ui text-xs mt-0.5" style={{ color: "#6B7A8D" }}>
+                Toque no peso desejado para cada critério.
+              </p>
+            </div>
+            <button onClick={() => setShowPesos(false)} className="text-[#6B7A8D] hover:text-[#0C2856] p-1"><X size={20}/></button>
+          </div>
+
+          {/* Lista com scroll */}
+          <div className="overflow-y-auto flex-1 px-5 py-3 space-y-2">
+            {ARTIGOS.map((item, idx) => {
+              const pesoAtual = rascunhoPesos[item.art] ?? pesosArtigos[item.art] ?? 1;
+              return (
+                <div key={item.art} className="flex items-center gap-3 py-2 border-b border-[#F4F7FA]">
+                  <span className="font-mono-label text-[11px] font-bold w-5 text-right flex-shrink-0" style={{ color: "#0068FF" }}>{idx + 1}.</span>
+                  <p className="font-ui text-sm flex-1 leading-tight" style={{ color: "#0C2856" }}>{item.titulo}</p>
+                  <div className="flex gap-1.5 flex-shrink-0">
+                    {[1, 2, 3].map(p => (
+                      <button key={p}
+                        onClick={() => setRascunhoPesos(prev => ({ ...prev, [item.art]: p }))}
+                        className="w-10 h-9 rounded-lg font-mono-label text-sm font-bold transition-all"
+                        style={{
+                          backgroundColor: pesoAtual === p ? "#0C2856" : "#F4F7FA",
+                          color: pesoAtual === p ? "white" : "#6B7A8D",
+                          border: pesoAtual === p ? "2px solid #0C2856" : "2px solid #E2E8F0",
+                        }}>
+                        {p}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Footer fixo */}
+          <div className="border-t border-[#E2E8F0] px-5 py-4 flex items-center justify-between flex-shrink-0">
+            <button
+              onClick={() => { setRascunhoPesos({}); setPesosArtigos({ ...PESOS_ARTIGOS_DEFAULT }); }}
+              className="font-ui text-sm px-4 py-2 border border-[#E2E8F0] rounded-lg hover:bg-[#F4F7FA]"
+              style={{ color: "#6B7A8D" }}>
+              Redefinir (tudo peso 1)
+            </button>
+            <button
+              onClick={() => { setPesosArtigos(prev => ({ ...prev, ...rascunhoPesos })); setRascunhoPesos({}); setShowPesos(false); }}
+              className="font-ui text-sm font-semibold px-5 py-2 rounded-lg text-white"
+              style={{ backgroundColor: "#0C2856" }}>
+              Salvar pesos
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
     <main className="max-w-5xl mx-auto px-6 py-10">
         <section className="mb-10 bg-white border border-[#E2E8F0] rounded-xl">
-          <div className="border-b-2 border-[#E2E8F0] px-6 py-3 flex items-center gap-2">
-            <Building2 size={16} />
-            <h2 className="font-ui text-sm font-semibold uppercase tracking-wide">Identificação da verificação</h2>
+          <div className="border-b-2 border-[#E2E8F0] px-6 py-3 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Building2 size={16} />
+              <h2 className="font-ui text-sm font-semibold uppercase tracking-wide">Identificação da verificação</h2>
+            </div>
+            {isAdmin(sessao) && (
+              <button
+                onClick={() => { setRascunhoPesos({}); setShowPesos(true); }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border font-mono-label text-[11px] uppercase tracking-wide transition-all hover:shadow-sm"
+                style={{ backgroundColor: "#E3F2FD", borderColor: "#0068FF", color: "#0C2856" }}
+                title="Definir pesos dos pontos de controle"
+              >
+                <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                  <circle cx="8" cy="8" r="6" stroke="#0068FF" strokeWidth="1.4"/>
+                  <path d="M8 5v3l2 2" stroke="#0068FF" strokeWidth="1.4" strokeLinecap="round"/>
+                </svg>
+                Pesos dos critérios
+              </button>
+            )}
           </div>
           <div className="p-6 grid grid-cols-1 sm:grid-cols-3 gap-6">
             <div>
@@ -2223,7 +2378,7 @@ function TabelaProporcoesHospitais() {
   );
 }
 
-function TelaPainel({ onVoltar, onIrParaInicio }) {
+function TelaPainel({ onVoltar, onIrParaInicio, sessao, onTrocarSessao }) {
   const [hospital, setHospital] = useState(HOSPITAIS[0].sigla);
 
   // Quais hospitais aparecem nos gráficos de comparação. O hospital selecionado
@@ -2354,7 +2509,7 @@ ${div.outerHTML}
 
   return (
     <TelaLayout>
-      <BarraTopo titulo="Painel de acompanhamento" onVoltar={onVoltar} onIrParaInicio={onIrParaInicio} />
+      <BarraTopo titulo="Painel de acompanhamento" onVoltar={onVoltar} onIrParaInicio={onIrParaInicio} sessao={sessao} onTrocarSessao={onTrocarSessao} />
 
       <main className="max-w-5xl mx-auto px-6 py-10 space-y-10">
         {/* Botão Exportar PDF */}
@@ -3486,12 +3641,14 @@ function PainelCadastroRealizado({ referencia, realizadoHospital, mesesCadastrad
 // MEDICAMENTOS
 // =====================================================================
 
-function TelaHomeMedicamentos({ onIrPara, onVoltarProduto }) {
+function TelaHomeMedicamentos({ onIrPara, onVoltarProduto, sessao, onTrocarSessao }) {
   return (
     <HomeTela
       titulo="Medicamentos"
       subtitulo="Medicamentos"
       onVoltar={onVoltarProduto}
+      sessao={sessao}
+      onTrocarSessao={onTrocarSessao}
       acoes={[
         { label: "Realizar monitoramento", descricao: "Registrar inventários e verificações de acurácia por estoque e setor de farmácia.", icone: ClipboardList, onClick: () => onIrPara("monitoramentoMedicamentos") },
         { label: "Visualizar painel", descricao: "Acompanhar a acurácia dos estoques, periodicidade sugerida e histórico de inventários.", icone: BarChart3, onClick: () => onIrPara("painelMedicamentos") },
@@ -3502,7 +3659,7 @@ function TelaHomeMedicamentos({ onIrPara, onVoltarProduto }) {
 
 
 // ---------- Monitoramento de Medicamentos: escolha do estoque + inventário + acurácia ----------
-function TelaMonitoramentoMedicamentos({ onVoltar, onIrParaInicio, estoques, setEstoques, historicoPorEstoque, setHistoricoPorEstoque, categoriasPorSetor, setCategoriasPorSetor }) {
+function TelaMonitoramentoMedicamentos({ onVoltar, onIrParaInicio, sessao, onTrocarSessao, estoques, setEstoques, historicoPorEstoque, setHistoricoPorEstoque, categoriasPorSetor, setCategoriasPorSetor }) {
   const [estoqueId, setEstoqueId] = useState(null);
   const [acaoAtiva, setAcaoAtiva] = useState(null); // null | "inventario" | "acuracia"
   const [showAddSetor, setShowAddSetor] = useState(false);
@@ -3560,7 +3717,7 @@ function TelaMonitoramentoMedicamentos({ onVoltar, onIrParaInicio, estoques, set
   if (!estoqueAtual) {
     return (
       <TelaLayout>
-      <BarraTopo titulo="Realizar monitoramento" onVoltar={onVoltar} produto="Medicamentos" onIrParaInicio={onIrParaInicio} />
+      <BarraTopo titulo="Realizar monitoramento" onVoltar={onVoltar} produto="Medicamentos" onIrParaInicio={onIrParaInicio} sessao={sessao} onTrocarSessao={onTrocarSessao} />
 
         <main className="max-w-3xl mx-auto px-6 py-14">
           <div className="flex items-start justify-between gap-4 mb-2 flex-wrap">
@@ -3686,7 +3843,7 @@ function TelaMonitoramentoMedicamentos({ onVoltar, onIrParaInicio, estoques, set
   if (acaoAtiva === "inventario") {
     return (
       <TelaLayout>
-      <BarraTopo titulo="Realizar monitoramento" onVoltar={() => { setEstoqueId(null); setAcaoAtiva(null); }} produto="Medicamentos" onIrParaInicio={onIrParaInicio} />
+      <BarraTopo titulo="Realizar monitoramento" onVoltar={() => { setEstoqueId(null); setAcaoAtiva(null); }} produto="Medicamentos" onIrParaInicio={onIrParaInicio} sessao={sessao} onTrocarSessao={onTrocarSessao} />
         <main className="max-w-2xl mx-auto px-6 py-10">
           <div className="mb-6">
             <p className="font-mono-label text-[11px] uppercase tracking-wider text-[#6B6357]">{estoqueAtual.nome}</p>
@@ -3710,7 +3867,7 @@ function TelaMonitoramentoMedicamentos({ onVoltar, onIrParaInicio, estoques, set
   if (acaoAtiva === "acuracia") {
     return (
       <TelaLayout>
-      <BarraTopo titulo="Realizar monitoramento" onVoltar={() => { setEstoqueId(null); setAcaoAtiva(null); }} produto="Medicamentos" />
+      <BarraTopo titulo="Realizar monitoramento" onVoltar={() => { setEstoqueId(null); setAcaoAtiva(null); }} produto="Medicamentos" onIrParaInicio={onIrParaInicio} sessao={sessao} onTrocarSessao={onTrocarSessao} />
         <main className="max-w-2xl mx-auto px-6 py-10">
           <div className="mb-6">
             <p className="font-mono-label text-[11px] uppercase tracking-wider text-[#6B6357]">{estoqueAtual.nome}</p>
@@ -4289,7 +4446,7 @@ function FormularioVerificacaoAcuracia({ estoqueId, historico, inventarios, cate
 }
 
 // ---------- Painel de Medicamentos (placeholder inicial) ----------
-function TelaPainelMedicamentos({ onVoltar, onIrParaInicio, estoques, historicoPorEstoque, categoriasPorSetor }) {
+function TelaPainelMedicamentos({ onVoltar, onIrParaInicio, sessao, onTrocarSessao, estoques, historicoPorEstoque, categoriasPorSetor }) {
   const [gerando, setGerando] = React.useState(false);
   const [tooltip, setTooltip] = React.useState(null); // { nomeExibido, percentual, cor, pctX, pctY }
 
@@ -4483,7 +4640,7 @@ ${div.outerHTML}
 
   return (
     <TelaLayout>
-      <BarraTopo titulo="Painel de acompanhamento" onVoltar={onVoltar} produto="Medicamentos" onIrParaInicio={onIrParaInicio} />
+      <BarraTopo titulo="Painel de acompanhamento" onVoltar={onVoltar} produto="Medicamentos" onIrParaInicio={onIrParaInicio} sessao={sessao} onTrocarSessao={onTrocarSessao} />
 
       <main className="max-w-6xl mx-auto px-4 py-8 space-y-6">
         <div className="flex justify-end no-print">
@@ -4834,6 +4991,18 @@ function TelaIdentificacao({ onEntrar }) {
   const [hospitalSigla, setHospitalSigla] = useState("");
   const podeContinuar = nome !== "" && hospitalSigla !== "";
 
+  function handleNome(n) {
+    setNome(n);
+    const h = HOSPITAIS.find(h => h.responsavel === n);
+    if (h) setHospitalSigla(h.sigla);
+  }
+
+  function handleHospital(sigla) {
+    setHospitalSigla(sigla);
+    const h = HOSPITAIS.find(h => h.sigla === sigla);
+    if (h?.responsavel) setNome(h.responsavel);
+  }
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center relative overflow-hidden"
       style={{ backgroundColor: "#F8FAFD", fontFamily: "'Fraunces', Georgia, serif" }}>
@@ -4881,11 +5050,11 @@ function TelaIdentificacao({ onEntrar }) {
           {/* Nome */}
           <div className="mb-4">
             <label className="font-mono-label text-[11px] uppercase tracking-wider block mb-1.5" style={{ color: "#6B7A8D" }}>
-              Seu nome
+              Identificação
             </label>
             <select
               value={nome}
-              onChange={(e) => setNome(e.target.value)}
+              onChange={(e) => handleNome(e.target.value)}
               className="w-full bg-[#F4F7FA] border border-[#CBD5E1] rounded-lg py-2.5 px-3 font-ui text-sm focus:outline-none focus:border-[#0068FF]"
             >
               <option value="">— Selecione seu nome —</option>
@@ -4898,11 +5067,11 @@ function TelaIdentificacao({ onEntrar }) {
           {/* Hospital/UCI */}
           <div className="mb-6">
             <label className="font-mono-label text-[11px] uppercase tracking-wider block mb-1.5" style={{ color: "#6B7A8D" }}>
-              Unidade hospitalar
+              Unidade
             </label>
             <select
               value={hospitalSigla}
-              onChange={(e) => setHospitalSigla(e.target.value)}
+              onChange={(e) => handleHospital(e.target.value)}
               className="w-full bg-[#F4F7FA] border border-[#CBD5E1] rounded-lg py-2.5 px-3 font-ui text-sm focus:outline-none focus:border-[#0068FF]"
             >
               <option value="">— Selecione a unidade —</option>
@@ -4939,7 +5108,9 @@ export default function App() {
   const [sessao, setSessao] = useState(null); // { nome, hospitalSigla }
 
   // Estado de Medicamentos compartilhado entre Monitoramento e Painel
-  const [estoquesMedicamentos] = useState(() => ESTOQUES_MEDICAMENTOS.map((e) => ({ ...e })));
+  const [estoquesMedicamentos, setEstoquesMedicamentos] = useState(() => ESTOQUES_MEDICAMENTOS.map((e) => ({ ...e })));
+  // Pesos dos pontos de controle — só o Administrador pode alterar
+  const [pesosArtigos, setPesosArtigos] = useState(() => ({ ...PESOS_ARTIGOS_DEFAULT }));
 
   // Histórico e categorias separados por hospital: { [hospitalSigla]: { [estoqueId|chave]: dados } }
   const [historicoMedicamentos, setHistoricoMedicamentos] = useState({});
@@ -4947,8 +5118,8 @@ export default function App() {
 
   // Retorna histórico do hospital atual da sessão (inicializa vazio se não existir)
   function getHistoricoHospital(sigla) {
+    if (!sigla) { const init = {}; ESTOQUES_MEDICAMENTOS.forEach(e => { init[e.id] = { inventarios: [], verificacoes: [] }; }); return init; }
     if (historicoMedicamentos[sigla]) return historicoMedicamentos[sigla];
-    // Primeira vez: inicializa vazio por setor
     const init = {};
     ESTOQUES_MEDICAMENTOS.forEach(e => { init[e.id] = { inventarios: [], verificacoes: [] }; });
     return init;
@@ -4960,6 +5131,7 @@ export default function App() {
     }));
   }
   function getCategoriasHospital(sigla) {
+    if (!sigla) return JSON.parse(JSON.stringify(CATEGORIAS_MEDICAMENTOS_MOCK));
     return categoriasMedicamentos[sigla] || JSON.parse(JSON.stringify(CATEGORIAS_MEDICAMENTOS_MOCK));
   }
   function setCategoriasHospital(sigla, updater) {
@@ -4970,14 +5142,15 @@ export default function App() {
   }
 
   const irParaInicio = () => setTela("selecaoProduto");
+  const trocarSessao = () => { setSessao(null); setTela("identificacao"); };
 
   // Tela de identificação — obrigatória antes de qualquer outra
   if (tela === "identificacao" || !sessao) {
     return <TelaIdentificacao onEntrar={(s) => { setSessao(s); setTela("selecaoProduto"); }} />;
   }
 
-  if (tela === "monitoramento") return <TelaMonitoramento onVoltar={() => setTela("alimentacao")} onIrParaInicio={irParaInicio} sessao={sessao} />;
-  if (tela === "painel") return <TelaPainel onVoltar={() => setTela("alimentacao")} onIrParaInicio={irParaInicio} sessao={sessao} />;
+  if (tela === "monitoramento") return <TelaMonitoramento onVoltar={() => setTela("alimentacao")} onIrParaInicio={irParaInicio} sessao={sessao} onTrocarSessao={trocarSessao} pesosArtigos={pesosArtigos} setPesosArtigos={setPesosArtigos} />;
+  if (tela === "painel") return <TelaPainel onVoltar={() => setTela("alimentacao")} onIrParaInicio={irParaInicio} sessao={sessao} onTrocarSessao={trocarSessao} />;
   if (tela === "alimentacao") return <TelaHome onIrPara={setTela} onVoltarProduto={() => setTela("selecaoProduto")} sessao={sessao} />;
   if (tela === "monitoramentoMedicamentos") {
     return (
@@ -4985,12 +5158,13 @@ export default function App() {
         onVoltar={() => setTela("medicamentos")}
         onIrParaInicio={irParaInicio}
         sessao={sessao}
+        onTrocarSessao={trocarSessao}
         estoques={estoquesMedicamentos}
         setEstoques={setEstoquesMedicamentos}
-        historicoPorEstoque={getHistoricoHospital(sessao.hospitalSigla)}
-        setHistoricoPorEstoque={(upd) => setHistoricoHospital(sessao.hospitalSigla, upd)}
-        categoriasPorSetor={getCategoriasHospital(sessao.hospitalSigla)}
-        setCategoriasPorSetor={(upd) => setCategoriasHospital(sessao.hospitalSigla, upd)}
+        historicoPorEstoque={getHistoricoHospital(sessao?.hospitalSigla)}
+        setHistoricoPorEstoque={(upd) => setHistoricoHospital(sessao?.hospitalSigla, upd)}
+        categoriasPorSetor={getCategoriasHospital(sessao?.hospitalSigla)}
+        setCategoriasPorSetor={(upd) => setCategoriasHospital(sessao?.hospitalSigla, upd)}
       />
     );
   }
@@ -5000,12 +5174,13 @@ export default function App() {
         onVoltar={() => setTela("medicamentos")}
         onIrParaInicio={irParaInicio}
         sessao={sessao}
+        onTrocarSessao={trocarSessao}
         estoques={estoquesMedicamentos}
         categoriasPorSetor={JSON.parse(JSON.stringify(CATEGORIAS_MEDICAMENTOS_MOCK))}
         historicoPorEstoque={HISTORICO_MEDICAMENTOS_MOCK}
       />
     );
   }
-  if (tela === "medicamentos") return <TelaHomeMedicamentos onIrPara={setTela} onVoltarProduto={() => setTela("selecaoProduto")} />;
-  return <TelaSelecaoProduto onIrPara={setTela} />;
+  if (tela === "medicamentos") return <TelaHomeMedicamentos onIrPara={setTela} onVoltarProduto={() => setTela("selecaoProduto")} sessao={sessao} onTrocarSessao={trocarSessao} />;
+  return <TelaSelecaoProduto onIrPara={setTela} sessao={sessao} onTrocarSessao={trocarSessao} />;
 }
